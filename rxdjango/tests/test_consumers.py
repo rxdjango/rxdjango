@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 import rxdjango.consumers as consumers_module
+from rxdjango.actions import action
 from rxdjango.channels import ContextChannel
 from rxdjango.consumers import StateConsumer, consumer, get_consumer_methods
 from rxdjango.exceptions import ForbiddenError
@@ -254,6 +255,36 @@ class TestStateConsumer:
         consumer.send.assert_awaited_once()
         payload = json.loads(consumer.send.await_args.kwargs['text_data'])
         assert payload == {'type': 'actionResponse', 'callId': 9, 'error': {'code': 500, 'message': 'boom'}}
+
+    def test_receive_action_invalid_params_sends_400_and_reraises(self):
+        consumer = StateConsumer()
+        consumer.send = AsyncMock()
+
+        class FakeChannel:
+            @staticmethod
+            @action
+            async def do_thing(name: str, count: int):
+                return {'name': name, 'count': count}
+
+        consumer.channel = FakeChannel()
+
+        with pytest.raises(Exception, match='Param "count" must be of type int'):
+            _run(consumer.receive_action({
+                'callId': 10,
+                'action': 'do_thing',
+                'params': ['hello', 'five'],
+            }))
+
+        consumer.send.assert_awaited_once()
+        payload = json.loads(consumer.send.await_args.kwargs['text_data'])
+        assert payload == {
+            'type': 'actionResponse',
+            'callId': 10,
+            'error': {
+                'code': 400,
+                'message': 'Param "count" must be of type int',
+            },
+        }
 
     def test_receive_authentication_without_token_sends_400(self):
         """Authentication message missing 'token' field must send a 400 error response."""
