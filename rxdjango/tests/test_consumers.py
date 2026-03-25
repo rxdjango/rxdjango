@@ -241,7 +241,7 @@ class TestStateConsumer:
         consumer.channel = object()
         consumer.send = AsyncMock()
 
-        with patch(
+        with patch('rxdjango.consumers.logger') as mock_logger, patch(
             'rxdjango.consumers.execute_action',
             new=AsyncMock(side_effect=RuntimeError('boom')),
         ):
@@ -252,9 +252,38 @@ class TestStateConsumer:
                     'params': [],
                 }))
 
+        mock_logger.exception.assert_called_once_with('Action %s failed', 'explode')
         consumer.send.assert_awaited_once()
         payload = json.loads(consumer.send.await_args.kwargs['text_data'])
-        assert payload == {'type': 'actionResponse', 'callId': 9, 'error': {'code': 500, 'message': 'boom'}}
+        assert payload == {
+            'type': 'actionResponse',
+            'callId': 9,
+            'error': {'code': 500, 'message': 'Internal server error'},
+        }
+
+    def test_receive_action_forbidden_preserves_message(self):
+        consumer = StateConsumer()
+        consumer.channel = object()
+        consumer.send = AsyncMock()
+
+        with patch(
+            'rxdjango.consumers.execute_action',
+            new=AsyncMock(side_effect=ForbiddenError('nope')),
+        ):
+            with pytest.raises(ForbiddenError, match='nope'):
+                _run(consumer.receive_action({
+                    'callId': 11,
+                    'action': 'explode',
+                    'params': [],
+                }))
+
+        consumer.send.assert_awaited_once()
+        payload = json.loads(consumer.send.await_args.kwargs['text_data'])
+        assert payload == {
+            'type': 'actionResponse',
+            'callId': 11,
+            'error': {'code': 403, 'message': 'nope'},
+        }
 
     def test_receive_action_invalid_params_sends_400_and_reraises(self):
         consumer = StateConsumer()
@@ -362,3 +391,26 @@ class TestStateConsumer:
         assert payload['callId'] == 7
         assert payload['error']['code'] == 400
         assert 'params' in payload['error']['message'].lower()
+
+    def test_receive_write_unexpected_error_sends_generic_500_and_reraises(self):
+        consumer = StateConsumer()
+        consumer.send = AsyncMock()
+        consumer._handle_write_save = AsyncMock(side_effect=RuntimeError('table users leaked'))
+
+        with patch('rxdjango.consumers.logger') as mock_logger:
+            with pytest.raises(RuntimeError, match='table users leaked'):
+                _run(consumer.receive_write({
+                    'type': 'write',
+                    'writeId': 12,
+                    'operation': 'save',
+                }))
+
+        mock_logger.exception.assert_called_once_with('Write operation %s failed', 'save')
+        consumer.send.assert_awaited_once()
+        payload = json.loads(consumer.send.await_args.kwargs['text_data'])
+        assert payload == {
+            'type': 'writeResponse',
+            'writeId': 12,
+            'success': False,
+            'error': {'code': 500, 'message': 'Internal server error'},
+        }
