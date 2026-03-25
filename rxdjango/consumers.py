@@ -429,7 +429,7 @@ class StateConsumer(AsyncWebsocketConsumer):
             }
             await self.send(text_data=json.dumps(response))
             raise
-        except Exception as e:
+        except Exception:
             logger.exception('Action %s failed', method_name)
             response = {
                 'type': 'actionResponse',
@@ -504,7 +504,7 @@ class StateConsumer(AsyncWebsocketConsumer):
             }
             await self.send(text_data=json.dumps(response))
 
-        except Exception as e:
+        except Exception:
             logger.exception('Write operation %s failed', operation)
             response = {
                 'type': 'writeResponse',
