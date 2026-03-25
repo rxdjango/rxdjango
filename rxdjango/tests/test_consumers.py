@@ -6,12 +6,15 @@ and StateConsumer message handling logic.
 """
 import asyncio
 import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 import rxdjango.consumers as consumers_module
+from rxdjango.channels import ContextChannel
 from rxdjango.consumers import StateConsumer, consumer, get_consumer_methods
+from rxdjango.exceptions import ForbiddenError
 
 CONSUMERS = getattr(consumers_module, '__CONSUMERS')
 
@@ -266,6 +269,25 @@ class TestStateConsumer:
         payload = json.loads(kwargs['text_data'])
         assert payload == {'type': 'auth', 'statusCode': 400, 'error': 'error/missing-token'}
         consumer.close.assert_awaited_once()
+
+    def test_authenticate_denies_channel_without_permission_override(self):
+        consumer = StateConsumer()
+        consumer.context_channel_class = ContextChannel
+        consumer.scope = {'url_route': {'kwargs': {}}}
+
+        fake_token = SimpleNamespace(
+            key='abc123',
+            user=SimpleNamespace(id=7, is_authenticated=True),
+        )
+
+        with patch('rxdjango.consumers.Token.objects.get', return_value=fake_token):
+            with pytest.raises(ForbiddenError, match='error/forbidden'):
+                _run(consumer.authenticate('abc123'))
+
+    def test_is_visible_defaults_to_false(self):
+        channel = ContextChannel(SimpleNamespace(id=7))
+
+        assert _run(channel.is_visible(42)) is False
 
     def test_receive_action_missing_fields_with_call_id_sends_400(self):
         """Action message with callId but missing action/params should send a 400 error."""
