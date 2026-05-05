@@ -27,6 +27,7 @@ a row to the index below in the same PR.
 
 | #    | Title | Date | Status |
 | ---- | ----- | ---- | ------ |
+| 0001 | [Monorepo layout](./0001-monorepo-layout.md) | 2026-05-05 | Active |
 | 0002 | [Define the core WebSocket protocol envelope](0002-core-websocket-protocol.md) | 2026-05-09 | Active |
 | 0003 | [Inherit the ContextChannel surface from rxdjango v0.0.x](0003-inherit-context-channel-surface.md) | 2026-05-11 | Active |
 | 0004 | [The `rx[type](default)` reactive field](0004-rx-type-reactive-field.md) | 2026-05-11 | Active |
