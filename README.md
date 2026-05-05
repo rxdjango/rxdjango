@@ -12,4 +12,6 @@ RxDjango closes that gap. A server-side channel declaration *is* the contract: d
 
 ## A rebuild
 
-This repository is a ground-up rebuild of RxDjango 0.0.x. The original — [CDIGlobalTrack/rxdjango](https://github.com/CDIGlobalTrack/rxdjango) — has been evolving in production for about five years in a real application and real load. Internals grew complex quickly under the pressure of scale; the semantics came slowly, over years. Those semantics turned out to be the real achievement — and they make most of the original complexity obsolete. This rebuild goes back to front: start from the semantics, then rebuild the internals using pieces of the original where they still fit
+This repository is a ground-up rebuild of RxDjango 0.0.x. The original — [CDIGlobalTrack/rxdjango](https://github.com/CDIGlobalTrack/rxdjango) — has been evolving in production for about five years in a real application and real load. Internals grew complex quickly under the pressure of scale; the semantics came slowly, over years. Those semantics turned out to be the real achievement — and they make most of the original complexity obsolete. This rebuild goes back to front: start from the semantics, then rebuild the internals using pieces of the original where they still fit.
+
+This project was forked from CDIGlobalTrack/rxdjango just for history tracking. The git repository has been built from scratch.
