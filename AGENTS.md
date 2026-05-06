@@ -20,6 +20,15 @@ The original (v0.0.x) is the reference for behavior parity — consult it for *w
 git clone https://github.com/CDIGlobalTrack/rxdjango ./rxdjango-0.0.x
 ```
 
+## Architecture decisions
+
+Accepted architectural decisions are recorded in `docs/adr/` as ADRs. They are *records*, not a deliberation workflow — a file exists there only after the decision is made. Conventions:
+
+- One decision per file, named `NNNN-kebab-case-title.md` (monotonic, never renumbered).
+- Immutable once merged; supersede via a new ADR rather than editing.
+- Template at `docs/adr/TEMPLATE.md`; index at `docs/adr/README.md` (update in the same PR that adds an ADR).
+- Consult relevant ADRs before proposing changes that touch their subject area, and reference them by number when explaining non-obvious choices in code or discussion.
+
 ## Current state
 
 No source code has been written yet. Build, test, and lint commands will be added as the codebase materializes — update this file when they exist.
