@@ -14,10 +14,10 @@ When suggesting features, prefer ones that make the framework's surface smaller 
 
 ## This is a rebuild
 
-The original (v0.0.x) is the reference for behavior parity — consult it for *what* the framework did, not *how* to structure the new code. It is expected at `./rxdjango-0.0.x/`. If that directory is missing, clone it before reasoning about prior-art behavior:
+The original (v0.0.x) is the reference for behavior parity — consult it for *what* the framework did, not *how* to structure the new code. It is expected at `./rxdjango-0`. If that directory is missing, clone it before reasoning about prior-art behavior:
 
 ```bash
-git clone https://github.com/CDIGlobalTrack/rxdjango ./rxdjango-0.0.x
+git clone https://github.com/CDIGlobalTrack/rxdjango ./rxdjango-0
 ```
 
 ## Architecture decisions
