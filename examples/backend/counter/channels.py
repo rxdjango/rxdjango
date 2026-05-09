@@ -1,7 +1,7 @@
 from rxdjango import ContextChannel, rx, action
 
 
-class RuntimeChannel(ContextChannel):
+class CounterChannel(ContextChannel):
 
     counter = rx[int](0)
 
