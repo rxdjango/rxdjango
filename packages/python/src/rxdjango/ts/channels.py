@@ -1,5 +1,7 @@
 import importlib
 import os
+import types
+import typing
 
 from django.conf import settings
 
@@ -9,7 +11,37 @@ from ..channels import ContextChannel
 TYPE_MAP = {
     int: 'number',
     str: 'string',
+    bool: 'boolean',
+    float: 'number',
+    type(None): 'null',
 }
+
+
+def _ts_type(py_type):
+    origin = typing.get_origin(py_type)
+    if origin is typing.Union or origin is types.UnionType:
+        parts = [_ts_type(arg) for arg in typing.get_args(py_type)]
+        seen = []
+        for p in parts:
+            if p not in seen:
+                seen.append(p)
+        return ' | '.join(seen)
+    return TYPE_MAP.get(py_type, 'any')
+
+
+def _ts_literal(value):
+    if value is None:
+        return 'null'
+    if value is True:
+        return 'true'
+    if value is False:
+        return 'false'
+    if isinstance(value, str):
+        escaped = value.replace('\\', '\\\\').replace("'", "\\'")
+        return f"'{escaped}'"
+    if isinstance(value, (int, float)):
+        return repr(value)
+    return None
 
 
 def create_app_channels(app, apply_changes=True, force=False):
@@ -81,7 +113,12 @@ def _render_module(channels):
 def _render_class(channel_cls):
     lines = [f'export class {channel_cls.__name__} extends ContextChannel {{']
     for field_name, rx_field in channel_cls._rx_fields.items():
-        ts_type = TYPE_MAP.get(rx_field.type, 'any')
+        ts_type = _ts_type(rx_field.type)
+        if rx_field.has_default:
+            literal = _ts_literal(rx_field.value)
+            if literal is not None:
+                lines.append(f'  {field_name}: {ts_type} = {literal};')
+                continue
         lines.append(f'  {field_name}: {ts_type};')
     lines.append('}')
     return lines
