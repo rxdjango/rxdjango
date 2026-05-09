@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -55,6 +56,9 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'backend.urls'
+
+RX_FRONTEND_DIR = os.path.join(BASE_DIR, '../frontend/src/app/rx_modules')
+RX_WEBSOCKET_URL = "http://localhost:8000/ws"
 
 TEMPLATES = [
     {

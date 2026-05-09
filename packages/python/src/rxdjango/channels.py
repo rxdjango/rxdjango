@@ -40,5 +40,5 @@ class ContextChannel(metaclass=ContextChannelMeta):
 
         return Consumer.as_asgi()
 
-    def __init__(self, user: AbstractBaseUser, **kwargs: Any) -> None:
+    def __init__(self) -> None:
         self._consumer = None  # will be set by consumer

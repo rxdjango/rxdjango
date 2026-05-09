@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .actions import execute_action
+from .exceptions import InvalidMessageReceived
 
-
-VALID_MESSAGE_TYPES = set(('ac',))
 
 class ContextConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -18,13 +17,19 @@ class ContextConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         # Intantiate a ContextChannel with received url parameters
-        kwargs = self.scope['url_route']['kwargs']
-        self.channel = self.context_channel_class(**kwargs)
+        self.channel = self.context_channel_class()
         self.channel._consumer = self
+
+        kwargs = self.scope['url_route']['kwargs']
+        await self.channel.on_connect(**kwargs)
 
         await self.send_ready()
 
-        await self.channel.on_connect()
+    async def send_ready(self):
+        await self.send({
+            't': 'ready',
+            'protocol': '0.0.0',
+        })
 
     async def receive(self, text_data: str) -> None:
         """Handle incoming WebSocket message."""
@@ -44,7 +49,6 @@ class ContextConsumer(AsyncWebsocketConsumer):
                 self.receive_action(data)
             case _:
                 raise InvalidMessageReceived(f'Type "{typ}" not valid')
-
 
     async def disconnect(self, close_code: int | None = None) -> None:
         """Handle WebSocket disconnection."""
@@ -91,13 +95,12 @@ class ContextConsumer(AsyncWebsocketConsumer):
             response = {'t': 'ac', 'id': call_id, 'r': result, 'e': 0}
             await self.send(text_data=json.dumps(response))
         except Exception as e:
-            response = {
+            await self.send({
                 't': 'ac',
                 'id': call_id,
                 'e': [
                     getattr(e, 'code', 500),
                     str(e) or type(e).__name__,
                 ],
-            }
-            await self.send(text_data=json.dumps(response))
+            })
             raise
