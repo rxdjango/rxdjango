@@ -1,0 +1,52 @@
+{
+  "name": "@rxdjango/react",
+  "version": "0.1.0",
+  "description": "React adapter for RxDjango",
+  "license": "MIT",
+  "author": "Luis Fagundes <lhfagundes@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rxdjango/rxdjango.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/rxdjango/rxdjango#readme",
+  "bugs": {
+    "url": "https://github.com/rxdjango/rxdjango/issues"
+  },
+  "keywords": [
+    "django",
+    "react",
+    "websocket",
+    "realtime"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}
