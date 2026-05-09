@@ -57,7 +57,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'backend.urls'
 
-RX_FRONTEND_DIR = os.path.join(BASE_DIR, '../frontend/src/app/rx_modules')
+RX_FRONTEND_DIR = os.path.join(BASE_DIR, '../frontend/src/app/rx')
 RX_WEBSOCKET_URL = "http://localhost:8000/ws"
 
 TEMPLATES = [
