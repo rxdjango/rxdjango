@@ -27,6 +27,6 @@ a row to the index below in the same PR.
 
 | #    | Title | Date | Status |
 | ---- | ----- | ---- | ------ |
-| —    | _no ADRs yet_ | | |
+| 0002 | [Define the core WebSocket protocol envelope](0002-core-websocket-protocol.md) | 2026-05-09 | Active |
 
 Status is `Active` by default. Use `Superseded by ADR-NNNN` when replaced.
