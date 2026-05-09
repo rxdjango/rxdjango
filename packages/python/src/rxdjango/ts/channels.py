@@ -1,10 +1,12 @@
 import importlib
+import inspect
 import os
 import types
 import typing
 
 from django.conf import settings
 
+from ..actions import list_actions
 from ..channels import ContextChannel
 
 
@@ -120,5 +122,27 @@ def _render_class(channel_cls):
                 lines.append(f'  {field_name}: {ts_type} = {literal};')
                 continue
         lines.append(f'  {field_name}: {ts_type};')
+    for method in list_actions(channel_cls):
+        lines.extend(_render_action(method))
     lines.append('}')
     return lines
+
+
+def _render_action(method):
+    hints = typing.get_type_hints(method)
+    sig = inspect.signature(method)
+    params = []
+    forwarded = []
+    for name in sig.parameters:
+        if name == 'self':
+            continue
+        ts_type = _ts_type(hints.get(name, type(None)))
+        params.append(f'{name}: {ts_type}')
+        forwarded.append(name)
+    params_str = ', '.join(params)
+    forwarded_str = ', '.join(forwarded)
+    return [
+        f'  async {method.__name__}({params_str}) {{',
+        f"    return await this.rx.callAction('{method.__name__}', [{forwarded_str}]);",
+        '  }',
+    ]

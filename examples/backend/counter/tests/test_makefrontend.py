@@ -27,3 +27,10 @@ class MakeFrontendCounterTests(FrontendTestCase):
             '`counter` must have a default value',
         )
         self.assertEqual(member['initializer']['text'], '0')
+
+    def test_increment_action_declared(self):
+        cls = self.parse_class()
+        member = find_member(cls, 'increment')
+        self.assertIsNotNone(member, '`increment` action not found on CounterChannel')
+        self.assertEqual(member['kind'], 'method')
+        self.assertEqual(member['params'], [])

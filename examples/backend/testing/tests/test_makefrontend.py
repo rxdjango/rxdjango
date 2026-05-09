@@ -42,3 +42,19 @@ class MakeFrontendTestingTests(FrontendTestCase):
             m['initializer'],
             'optional field without Python default must not have a TS initializer',
         )
+
+    def test_action_method_declared_with_typed_params(self):
+        m = find_member(self._cls, 'do_action')
+        self.assertIsNotNone(m, 'action method `do_action` not found')
+        self.assertEqual(m['kind'], 'method')
+        self.assertEqual(
+            m['params'],
+            [
+                {'name': 'count', 'type': 'number'},
+                {'name': 'label', 'type': 'string'},
+            ],
+        )
+
+    def test_inert_method_not_emitted(self):
+        m = find_member(self._cls, 'inert')
+        self.assertIsNone(m, 'non-action method must not be emitted in TS')

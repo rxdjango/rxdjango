@@ -1,4 +1,4 @@
-from rxdjango import ContextChannel, rx
+from rxdjango import ContextChannel, rx, action
 
 
 class TestingChannel(ContextChannel):
@@ -8,3 +8,10 @@ class TestingChannel(ContextChannel):
 
     str_with_default = rx[str]('hello')
     str_optional = rx[str | None]()
+
+    @action
+    async def do_action(self, count: int, label: str):
+        pass
+
+    async def inert(self):
+        pass
