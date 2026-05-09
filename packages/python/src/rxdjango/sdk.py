@@ -12,16 +12,11 @@ def make_sdk(apply_changes=True, quiet=False, force=False):
         if not quiet:
             print(msg)
 
-    models = apps.get_models()
-    installed_apps = list(set([x.__module__.split('.')[0] for x in models]))
+    installed_apps = sorted({config.name.split('.')[0] for config in apps.get_app_configs()})
 
     changed = False
 
     for app in installed_apps:
-        diff = create_app_interfaces(app, apply_changes, force)
-        if diff:
-            changed = True
-            log(diff)
         diff = create_app_channels(app, apply_changes, force)
         if diff:
             changed = True

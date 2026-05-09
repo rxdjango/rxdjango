@@ -1,4 +1,5 @@
 from .consumers import ContextConsumer
+from .rx import RxField
 
 
 class ContextChannelMeta(type):
@@ -18,7 +19,11 @@ class ContextChannelMeta(type):
             if meta.abstract:
                 return new_class
 
-        new_class._rx_fields = {}
+        new_class._rx_fields = {
+            key: value
+            for key, value in attrs.items()
+            if isinstance(value, RxField)
+        }
 
         return new_class
 
