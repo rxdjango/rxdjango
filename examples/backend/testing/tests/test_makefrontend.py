@@ -18,14 +18,15 @@ class MakeFrontendTestingTests(FrontendTestCase):
         self.assertIsNotNone(m['initializer'], 'expected initializer for int_with_default')
         self.assertEqual(m['initializer']['text'], '1')
 
-    def test_int_optional_has_no_initializer(self):
+    def test_int_optional_initialized_to_null(self):
         m = find_member(self._cls, 'int_optional')
         self.assertIsNotNone(m)
         self.assertEqual(m['type'], 'number | null')
-        self.assertIsNone(
+        self.assertIsNotNone(
             m['initializer'],
-            'optional field without Python default must not have a TS initializer',
+            'optional field without Python default must be initialized to null',
         )
+        self.assertEqual(m['initializer']['text'], 'null')
 
     def test_str_with_default(self):
         m = find_member(self._cls, 'str_with_default')
@@ -34,14 +35,15 @@ class MakeFrontendTestingTests(FrontendTestCase):
         self.assertIsNotNone(m['initializer'], 'expected initializer for str_with_default')
         self.assertEqual(m['initializer']['text'], "'hello'")
 
-    def test_str_optional_has_no_initializer(self):
+    def test_str_optional_initialized_to_null(self):
         m = find_member(self._cls, 'str_optional')
         self.assertIsNotNone(m)
         self.assertEqual(m['type'], 'string | null')
-        self.assertIsNone(
+        self.assertIsNotNone(
             m['initializer'],
-            'optional field without Python default must not have a TS initializer',
+            'optional field without Python default must be initialized to null',
         )
+        self.assertEqual(m['initializer']['text'], 'null')
 
     def test_action_method_declared_with_typed_params(self):
         m = find_member(self._cls, 'do_action')

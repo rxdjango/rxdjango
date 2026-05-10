@@ -121,7 +121,12 @@ def _render_class(channel_cls):
             if literal is not None:
                 lines.append(f'  {field_name}: {ts_type} = {literal};')
                 continue
-        lines.append(f'  {field_name}: {ts_type};')
+        if 'null' not in [p.strip() for p in ts_type.split('|')]:
+            raise ValueError(
+                f"Field '{field_name}' on {channel_cls.__name__} has no default value; "
+                f"declare it as Optional (include None in the type) so it can be initialized as null."
+            )
+        lines.append(f'  {field_name}: {ts_type} = null;')
     for method in list_actions(channel_cls):
         lines.extend(_render_action(method))
     lines.append('}')
