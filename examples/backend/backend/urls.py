@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.urls import path
 
 from counter.channels import CounterChannel
+from testing import views as testing_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('src/<str:app>/<str:filename>', testing_views.source),
 ]
 
 websocket_urlpatterns = [
