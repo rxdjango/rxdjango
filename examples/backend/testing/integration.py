@@ -152,10 +152,19 @@ class RxIntegrationTestCase(ChannelsLiveServerTestCase):
         for filename, content in (files or {}).items():
             (pkg_dir / filename).write_text(content)
         for linkname, target in (extra or {}).items():
-            link_path = pkg_dir / linkname
-            if link_path.exists() or link_path.is_symlink():
-                link_path.unlink()
-            os.symlink(target, link_path)
+            dest_path = pkg_dir / linkname
+            if dest_path.is_symlink() or dest_path.exists():
+                if dest_path.is_dir() and not dest_path.is_symlink():
+                    shutil.rmtree(dest_path)
+                else:
+                    dest_path.unlink()
+            # Copy rather than symlink so node resolves bare imports (e.g.
+            # `react`) starting from this workdir's node_modules instead of
+            # the real package location, which intentionally lacks `react`.
+            if Path(target).is_dir():
+                shutil.copytree(target, dest_path)
+            else:
+                shutil.copy2(target, dest_path)
 
     def ws_url(self, route: str) -> str:
         if not route.startswith('/'):

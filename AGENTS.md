@@ -54,6 +54,10 @@ Accepted architectural decisions are recorded in `docs/adr/` as ADRs. They are *
 
 - In TSX, split JSX elements across multiple lines, even short ones — put children on their own line rather than inlining them with the opening/closing tags. Applies even to trivial cases like `<p>Value: {x}</p>`.
 
-## Current state
+## Running tests
 
-No source code has been written yet. Build, test, and lint commands will be added as the codebase materializes — update this file when they exist.
+- Python package tests: `uv run pytest` from the repo root.
+- Example/integration tests (Django + Node-driven channel runners):
+  `cd examples/backend && uv run ./manage.py test`. The integration suite
+  builds `packages/react` via `npm run build` on first run, so `npm` and
+  `node` must be on PATH.
