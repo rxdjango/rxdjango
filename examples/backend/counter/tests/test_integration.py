@@ -69,17 +69,13 @@ class CounterIntegrationTests(RxIntegrationTestCase):
     """Drives the counter channel from a real Node client over a live websocket."""
 
     app_label = 'counter'
+    channel = 'CounterChannel'
+    url = '/ws/counter/'
 
     def test_increment_action_reflects_in_frontend_counter(self):
-        self.write_runner(RUNNER_TS)
-        result = self.run_node('runner.ts', self.ws_url('/ws/counter/'))
+        self.setup('const before = channel.counter')
+        self.execute('await channel.increment()')
+        self.wait_for('channel.counter !== before')
+        counter = self.get_state('channel.counter')
 
-        self.assertEqual(
-            result.returncode, 0,
-            f'node runner failed:\nstdout={result.stdout}\nstderr={result.stderr}',
-        )
-
-        lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
-        self.assertTrue(lines, f'no stdout from runner; stderr={result.stderr}')
-        payload = json.loads(lines[-1])
-        self.assertEqual(payload, {'counter': 1})
+        self.assertEqual(counter, 1)

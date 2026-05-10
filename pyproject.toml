@@ -4,6 +4,7 @@ version = "0.0.0"
 description = "Development environment for rxdjango"
 requires-python = ">=3.12"
 dependencies = [
+    "pip>=26.1.1",
     "rxdjango",
 ]
 
