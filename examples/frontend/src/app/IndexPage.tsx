@@ -1,10 +1,10 @@
 import React from 'react';
 
 interface IndexPageProps {
-  onSelectCounter: () => void;
+  onSelect: (name: 'counter') => void;
 }
 
-export function IndexPage({ onSelectCounter }: IndexPageProps) {
+export function IndexPage({ onSelect }: IndexPageProps) {
   return (
     <div>
       <h1>RxDjango Demo</h1>
@@ -19,7 +19,7 @@ export function IndexPage({ onSelectCounter }: IndexPageProps) {
             href="#counter"
             onClick={(event) => {
               event.preventDefault();
-              onSelectCounter();
+              onSelect('counter');
             }}
           >
             Counter
