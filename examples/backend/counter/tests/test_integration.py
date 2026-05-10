@@ -40,9 +40,12 @@ from rxdjango.ts.channels import create_app_channels
 # with the real implementation; if it drifts, see ContextChannel.ts.
 REACT_SHIM_JS = r"""
 export class ContextChannel {
-  constructor() {
+  constructor(url) {
     this._version = 0;
     this._listeners = new Set();
+    this._actionSeq = 0;
+    this._pending = new Map();
+    this._sendQueue = [];
     this.rx = {
       subscribe: (listener) => {
         this._listeners.add(listener);
@@ -51,11 +54,52 @@ export class ContextChannel {
       getVersion: () => this._version,
       callAction: (action, params) => this._callAction(action, params),
     };
+    if (url) this._connect(url);
   }
-  async _callAction(_action, _params) {
-    throw new Error("ContextChannel._callAction not implemented");
+  _connect(url) {
+    const ws = new WebSocket(url);
+    this._ws = ws;
+    ws.addEventListener("open", () => {
+      while (this._sendQueue.length) ws.send(this._sendQueue.shift());
+    });
+    ws.addEventListener("message", (ev) => {
+      const data = typeof ev.data === "string" ? ev.data : String(ev.data);
+      setTimeout(() => this._onMessage(data), 0);
+    });
   }
-  notify() {
+  _onMessage(raw) {
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+    switch (msg.t) {
+      case "ready":
+        this._notify();
+        return;
+      case "rx":
+        if ("v" in msg) this[msg.f] = msg.v;
+        this._notify();
+        return;
+      case "ac": {
+        const pending = this._pending.get(msg.id);
+        if (!pending) return;
+        this._pending.delete(msg.id);
+        if (Array.isArray(msg.e)) pending.reject(new Error(String(msg.e[1] ?? "action failed")));
+        else pending.resolve(msg.r);
+        return;
+      }
+    }
+  }
+  async _callAction(action, params) {
+    if (!this._ws) throw new Error("ContextChannel: no websocket connection");
+    const id = String(++this._actionSeq);
+    const payload = JSON.stringify({ t: "ac", a: action, id, p: params });
+    const promise = new Promise((resolve, reject) => {
+      this._pending.set(id, { resolve, reject });
+    });
+    if (this._ws.readyState === WebSocket.OPEN) this._ws.send(payload);
+    else this._sendQueue.push(payload);
+    return promise;
+  }
+  _notify() {
     this._version++;
     this._listeners.forEach((listener) => listener());
   }

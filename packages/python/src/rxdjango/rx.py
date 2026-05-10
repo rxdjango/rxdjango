@@ -10,7 +10,7 @@ class RxField:
     def __init__(self, type_, initial=_UNSET):
         self.type = type_
         self.has_default = initial is not _UNSET
-        self.value = None if initial is _UNSET else initial
+        self.default = None if initial is _UNSET else initial
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -18,10 +18,16 @@ class RxField:
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
-        return self.value
+        try:
+            return obj.__dict__[self.name]
+        except KeyError:
+            return self.default
 
     def __set__(self, obj, value):
-        self.value = value
+        obj.__dict__[self.name] = value
+        consumer = getattr(obj, '_consumer', None)
+        if consumer is not None:
+            consumer.enqueue_rx(self.name, value)
 
 
 rx = RxField

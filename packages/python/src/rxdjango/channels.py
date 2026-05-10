@@ -4,15 +4,11 @@ from .rx import RxField
 
 class ContextChannelMeta(type):
     def __new__(cls, name, bases, attrs):
-        """Create and return a new class instance."""
-
-        # Create the new class as usual.
         new_class = super().__new__(cls, name, bases, attrs)
 
         if new_class.__module__ == cls.__module__:
             return new_class
 
-        # If this is an abstract class, no functionality to bind
         meta = attrs.get("Meta")
         if meta:
             meta.abstract = getattr(meta, 'abstract', False)
@@ -46,4 +42,10 @@ class ContextChannel(metaclass=ContextChannelMeta):
         return Consumer.as_asgi()
 
     def __init__(self) -> None:
-        self._consumer = None  # will be set by consumer
+        self._consumer = None
+
+    async def on_connect(self, **kwargs) -> None:
+        pass
+
+    async def on_disconnect(self) -> None:
+        pass

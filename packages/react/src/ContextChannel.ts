@@ -18,6 +18,9 @@ export interface ChannelRx {
   callAction: (action: string, params: any[]) => Promise<any>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Pending = { resolve: (v: any) => void; reject: (e: any) => void };
+
 /**
  * Base class for generated TypeScript channel classes.
  *
@@ -33,6 +36,14 @@ export abstract class ContextChannel<T = unknown> {
 
   private _version = 0;
   private readonly _listeners = new Set<() => void>();
+  private _ws?: WebSocket;
+  private _actionSeq = 0;
+  private readonly _pending = new Map<string, Pending>();
+  private readonly _sendQueue: string[] = [];
+
+  constructor(url?: string) {
+    if (url) this._connect(url);
+  }
 
   readonly rx: ChannelRx = {
     subscribe: (listener: () => void) => {
@@ -45,20 +56,82 @@ export abstract class ContextChannel<T = unknown> {
     callAction: (action, params) => this._callAction(action, params),
   };
 
-  /**
-   * Dispatch an action to the Django channel over the WebSocket.
-   * Stub for now — wired up alongside the connection layer.
-   */
+  private _connect(url: string): void {
+    const ws = new WebSocket(url);
+    this._ws = ws;
+    ws.addEventListener("open", () => {
+      while (this._sendQueue.length) {
+        ws.send(this._sendQueue.shift()!);
+      }
+    });
+    ws.addEventListener("message", (ev: MessageEvent) => {
+      // Each frame is handled in its own macrotask so awaiters of
+      // `callAction` can resolve and re-subscribe before the next
+      // server-pushed message is processed (e.g. an `rx` update that
+      // immediately follows an `ac` response).
+      const data = typeof ev.data === "string" ? ev.data : String(ev.data);
+      setTimeout(() => this._onMessage(data), 0);
+    });
+  }
+
+  private _onMessage(raw: string): void {
+    let msg: { t?: string; [k: string]: unknown };
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    switch (msg.t) {
+      case "ready":
+        this._notify();
+        return;
+      case "rx": {
+        const field = msg.f as string;
+        if ("v" in msg) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (this as any)[field] = msg.v;
+        }
+        this._notify();
+        return;
+      }
+      case "ac": {
+        const id = msg.id as string;
+        const pending = this._pending.get(id);
+        if (!pending) return;
+        this._pending.delete(id);
+        const err = msg.e;
+        if (Array.isArray(err)) {
+          pending.reject(new Error(String(err[1] ?? "action failed")));
+        } else {
+          pending.resolve(msg.r);
+        }
+        return;
+      }
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected async _callAction(_action: string, _params: any[]): Promise<any> {
-    throw new Error("ContextChannel._callAction not implemented");
+  protected async _callAction(action: string, params: any[]): Promise<any> {
+    if (!this._ws) {
+      throw new Error("ContextChannel: no websocket connection");
+    }
+    const id = String(++this._actionSeq);
+    const payload = JSON.stringify({ t: "ac", a: action, id, p: params });
+    const promise = new Promise((resolve, reject) => {
+      this._pending.set(id, { resolve, reject });
+    });
+    if (this._ws.readyState === WebSocket.OPEN) {
+      this._ws.send(payload);
+    } else {
+      this._sendQueue.push(payload);
+    }
+    return promise;
   }
 
   /**
    * Mark the channel state as updated and notify React subscribers.
-   * Generated subclasses / StateBuilder call this after applying a diff.
    */
-  protected notify(): void {
+  protected _notify(): void {
     this._version++;
     this._listeners.forEach((listener) => listener());
   }

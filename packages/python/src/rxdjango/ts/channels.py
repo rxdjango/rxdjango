@@ -117,7 +117,7 @@ def _render_class(channel_cls):
     for field_name, rx_field in channel_cls._rx_fields.items():
         ts_type = _ts_type(rx_field.type)
         if rx_field.has_default:
-            literal = _ts_literal(rx_field.value)
+            literal = _ts_literal(rx_field.default)
             if literal is not None:
                 lines.append(f'  {field_name}: {ts_type} = {literal};')
                 continue
