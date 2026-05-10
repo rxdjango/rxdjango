@@ -1,26 +1,16 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from 'react';
+import { IndexPage } from './app/IndexPage';
+import { CounterPage } from './app/examples/counter/CounterPage';
+
+type View = 'index' | 'counter';
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+  const [view, setView] = useState<View>('index');
+
+  if (view === 'counter') {
+    return <CounterPage onBack={() => setView('index')} />;
+  }
+  return <IndexPage onSelectCounter={() => setView('counter')} />;
 }
 
 export default App;
