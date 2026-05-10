@@ -34,3 +34,19 @@ class MakeFrontendCounterTests(FrontendTestCase):
         self.assertIsNotNone(member, '`increment` action not found on CounterChannel')
         self.assertEqual(member['kind'], 'method')
         self.assertEqual(member['params'], [])
+
+    def test_endpoint_matches_routing_pattern(self):
+        cls = self.parse_class()
+        member = find_member(cls, 'endpoint')
+        self.assertIsNotNone(member, '`endpoint` field must be emitted from URL routing')
+        self.assertEqual(member['type'], 'string')
+        self.assertIsNotNone(member['initializer'])
+        self.assertEqual(member['initializer']['text'], '"/ws/counter/"')
+
+    def test_base_url_uses_socket_url_const(self):
+        cls = self.parse_class()
+        member = find_member(cls, 'baseURL')
+        self.assertIsNotNone(member, '`baseURL` field must be emitted')
+        self.assertEqual(member['type'], 'string')
+        self.assertIsNotNone(member['initializer'])
+        self.assertEqual(member['initializer']['text'], 'SOCKET_URL')

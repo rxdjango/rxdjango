@@ -1,10 +1,13 @@
 import importlib
 import inspect
+import json
 import os
 import types
 import typing
 
+from channels.routing import ProtocolTypeRouter, URLRouter
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 from ..actions import list_actions
 from ..channels import ContextChannel
@@ -58,7 +61,8 @@ def create_app_channels(app, apply_changes=True, force=False):
     if not channels:
         return None
 
-    content = _render_module(channels)
+    endpoints = _discover_endpoints(app)
+    content = _render_module(channels, endpoints)
 
     ts_dir = os.path.join(settings.RX_FRONTEND_DIR, app)
     ts_path = os.path.join(ts_dir, f'{app}.channels.ts')
@@ -78,6 +82,69 @@ def create_app_channels(app, apply_changes=True, force=False):
         fh.write(content)
 
     return f'Wrote {ts_path}'
+
+
+def _discover_endpoints(app):
+    """Walk the project's ASGI routing and return {ContextChannel subclass: endpoint_path}.
+
+    The endpoint is the URL pattern as a string with a leading slash, suitable
+    for concatenation with a base URL like 'ws://host:port'.
+    """
+    routes = _list_consumer_patterns(app)
+    endpoints = {}
+    for route in routes:
+        consumer_class = getattr(route.callback, 'consumer_class', None)
+        if consumer_class is None:
+            continue
+        channel_cls = getattr(consumer_class, 'context_channel_class', None)
+        if channel_cls is None:
+            continue
+        pattern = str(route.pattern)
+        if not pattern.startswith('/'):
+            pattern = '/' + pattern
+        endpoints[channel_cls] = pattern
+    return endpoints
+
+
+def _get_root_routing():
+    asgi_app = getattr(settings, 'ASGI_APPLICATION', None)
+    if not asgi_app:
+        return None
+    module_name, app_name = asgi_app.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    return getattr(module, app_name, None)
+
+
+def _list_consumer_patterns(app_name, pattern_list=None, router=None):
+    if pattern_list is None:
+        pattern_list = []
+        router = _get_root_routing()
+        if router is None:
+            return pattern_list
+
+    inner = getattr(router, 'application', None)
+    if inner is not None:
+        router = inner
+
+    if isinstance(router, ProtocolTypeRouter):
+        websocket_router = router.application_mapping.get('websocket')
+        if websocket_router is not None:
+            _list_consumer_patterns(app_name, pattern_list, websocket_router)
+    elif isinstance(router, URLRouter):
+        for route in router.routes:
+            callback = route.callback
+            consumer_class = getattr(callback, 'consumer_class', None)
+            if consumer_class is None:
+                if isinstance(route, URLRouter):
+                    _list_consumer_patterns(app_name, pattern_list, route)
+                continue
+            channel_cls = getattr(consumer_class, 'context_channel_class', None)
+            if channel_cls is None:
+                continue
+            if channel_cls.__module__.startswith(f'{app_name}.'):
+                pattern_list.append(route)
+
+    return pattern_list
 
 
 def _find_channels(app):
@@ -101,19 +168,32 @@ def _find_channels(app):
     return found
 
 
-def _render_module(channels):
+def _render_module(channels, endpoints):
+    socket_url = getattr(settings, 'RX_WEBSOCKET_URL', None)
+    if not socket_url:
+        raise ImproperlyConfigured(
+            "settings.RX_WEBSOCKET_URL is not set. Set it to the websocket "
+            "base URL of your backend (e.g. 'ws://localhost:8000')."
+        )
+
     lines = [
         "import { ContextChannel } from '@rxdjango/react';",
         '',
+        f'const SOCKET_URL = {json.dumps(socket_url)};',
+        '',
     ]
     for channel_cls in channels:
-        lines.extend(_render_class(channel_cls))
+        endpoint = endpoints.get(channel_cls)
+        lines.extend(_render_class(channel_cls, endpoint))
         lines.append('')
     return '\n'.join(lines)
 
 
-def _render_class(channel_cls):
+def _render_class(channel_cls, endpoint):
     lines = [f'export class {channel_cls.__name__} extends ContextChannel {{']
+    if endpoint is not None:
+        lines.append(f'  protected endpoint: string = {json.dumps(endpoint)};')
+        lines.append('  protected baseURL: string = SOCKET_URL;')
     for field_name, rx_field in channel_cls._rx_fields.items():
         ts_type = _ts_type(rx_field.type)
         if rx_field.has_default:
