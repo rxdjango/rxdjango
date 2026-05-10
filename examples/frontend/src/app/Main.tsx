@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { IndexPage } from './IndexPage';
 import { CounterPage } from './examples/counter/CounterPage';
 
@@ -9,15 +9,43 @@ interface ExampleMeta {
   render: () => ReactNode;
 }
 
-export function Main() {
-  const [view, setView] = useState<View>('index');
+const examples: Record<Exclude<View, 'index'>, ExampleMeta> = {
+  counter: { title: 'Counter', render: () => <CounterPage /> },
+};
 
-  const examples: Record<Exclude<View, 'index'>, ExampleMeta> = {
-    counter: { title: 'Counter', render: () => <CounterPage /> },
+function pathToView(pathname: string): View {
+  const segment = pathname.replace(/^\/+|\/+$/g, '');
+  if (segment in examples) {
+    return segment as View;
+  }
+  return 'index';
+}
+
+function viewToPath(view: View): string {
+  return view === 'index' ? '/' : `/${view}`;
+}
+
+export function Main() {
+  const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
+
+  useEffect(() => {
+    const onPopState = () => {
+      setView(pathToView(window.location.pathname));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = (next: View) => {
+    const path = viewToPath(next);
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setView(next);
   };
 
   if (view === 'index') {
-    return <IndexPage onSelect={(name) => setView(name)} />;
+    return <IndexPage onSelect={(name) => navigate(name)} />;
   }
 
   const example = examples[view];
@@ -25,18 +53,22 @@ export function Main() {
     <div>
       <nav>
         <a
-          href="#"
+          href="/"
           onClick={(event) => {
             event.preventDefault();
-            setView('index');
+            navigate('index');
           }}
         >
           RxDjango Demo
         </a>
         {' -> '}
-        <span>{example.title}</span>
+        <span>
+          {example.title}
+        </span>
       </nav>
-      <h1>{example.title}</h1>
+      <h1>
+        {example.title}
+      </h1>
       {example.render()}
     </div>
   );
