@@ -28,5 +28,6 @@ a row to the index below in the same PR.
 | #    | Title | Date | Status |
 | ---- | ----- | ---- | ------ |
 | 0002 | [Define the core WebSocket protocol envelope](0002-core-websocket-protocol.md) | 2026-05-09 | Active |
+| 0003 | [Inherit the ContextChannel surface from rxdjango v0.0.x](0003-inherit-context-channel-surface.md) | 2026-05-11 | Active |
 
 Status is `Active` by default. Use `Superseded by ADR-NNNN` when replaced.
