@@ -10,7 +10,7 @@ class CarouselChannel(ContextChannel):
     first_letter = rx[str](fruit[0])
 
     @action
-    async def increment(self):
+    async def rotate(self):
         self.selected = (self.selected + 1) % len(self.FRUITS)
         self.fruit = self.FRUITS[self.selected]
         self.first_letter = self.fruit[0]
