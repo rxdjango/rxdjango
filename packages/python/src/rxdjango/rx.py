@@ -90,10 +90,21 @@ class _PlainRxField(RxField):
 
     def __set__(self, obj, value):
         _validate(value, self.allowed, self.name)
+        old = obj.__dict__.get(self.name, self.default)
         obj.__dict__[self.name] = value
         consumer = getattr(obj, '_consumer', None)
         if consumer is not None:
             consumer.enqueue_rx(self.name, value)
+        if old != value:
+            _propagate_to_memos(obj, self.name)
+
+
+def _propagate_to_memos(obj, changed_name):
+    memo_order = getattr(type(obj), '_memo_order', None)
+    if not memo_order:
+        return
+    from .memo import recompute_memos
+    recompute_memos(obj, {changed_name})
 
 
 _typed_field_cache: dict = {}
@@ -124,10 +135,13 @@ def _make_typed_field(base):
 
         def __set__(self, obj, value):
             _validate(value, self.allowed, self.name)
+            old = obj.__dict__.get(self.name, self.default)
             obj.__dict__[self.name] = value
             consumer = getattr(obj, '_consumer', None)
             if consumer is not None:
                 consumer.enqueue_rx(self.name, value)
+            if old != value:
+                _propagate_to_memos(obj, self.name)
 
     _TypedRxField.__name__ = f'rx[{base.__name__}]'
     _TypedRxField.__qualname__ = _TypedRxField.__name__

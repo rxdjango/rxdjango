@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     'counter',
     'carousel',
+    'memo',
     'testing',
 ]
 
