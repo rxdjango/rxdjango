@@ -21,7 +21,7 @@ from testing import views as testing_views
 from counter.channels import CounterChannel
 from carousel.channels import CarouselChannel
 from memo.channels import CarouselMemoChannel
-from testing.channels import TestingChannel
+from testing.channels import TestingChannel, MemoTrackingChannel
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,4 +33,5 @@ websocket_urlpatterns = [
     path('ws/carousel/', CarouselChannel.as_asgi()),
     path('ws/memo/', CarouselMemoChannel.as_asgi()),
     path('ws/testing/', TestingChannel.as_asgi()),
+    path('ws/testing/memo/', MemoTrackingChannel.as_asgi()),
 ]

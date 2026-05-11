@@ -1,4 +1,4 @@
-from rxdjango import ContextChannel, rx, action
+from rxdjango import ContextChannel, rx, action, memo
 
 
 class TestingChannel(ContextChannel):
@@ -23,3 +23,30 @@ class TestingChannel(ContextChannel):
         self.str_with_default = self.str_optional[
             self.int_with_default:self.int_optional
         ]
+
+
+class MemoTrackingChannel(ContextChannel):
+
+    field_a = rx[int](0)
+    field_b = rx[int](0)
+
+    count_a = rx[int](0)
+    count_b = rx[int](0)
+
+    @action
+    async def increment_a(self):
+        self.field_a = self.field_a + 1
+
+    @action
+    async def increment_b(self):
+        self.field_b = self.field_b + 1
+
+    @memo('field_a')
+    def double_a(self):
+        self.count_a = self.count_a + 1
+        return self.field_a * 2
+
+    @memo('field_b')
+    def double_b(self):
+        self.count_b = self.count_b + 1
+        return self.field_b * 2
