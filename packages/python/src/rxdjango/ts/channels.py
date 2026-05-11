@@ -11,6 +11,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from ..actions import list_actions
 from ..channels import ContextChannel
+from . import header
 
 
 TYPE_MAP = {
@@ -62,7 +63,7 @@ def create_app_channels(app, apply_changes=True, force=False):
         return None
 
     endpoints = _discover_endpoints(app)
-    content = _render_module(channels, endpoints)
+    content = _render_module(app, channels, endpoints)
 
     ts_dir = os.path.join(settings.RX_FRONTEND_DIR, app)
     ts_path = os.path.join(ts_dir, f'{app}.channels.ts')
@@ -71,7 +72,7 @@ def create_app_channels(app, apply_changes=True, force=False):
     if os.path.exists(ts_path):
         with open(ts_path, 'r') as fh:
             existing = fh.read()
-        if not force and existing == content:
+        if not force and existing.split('\n')[2:] == content.split('\n')[2:]:
             return None
 
     if not apply_changes:
@@ -168,7 +169,7 @@ def _find_channels(app):
     return found
 
 
-def _render_module(channels, endpoints):
+def _render_module(app, channels, endpoints):
     socket_url = getattr(settings, 'RX_WEBSOCKET_URL', None)
     if not socket_url:
         raise ImproperlyConfigured(
@@ -176,12 +177,17 @@ def _render_module(channels, endpoints):
             "base URL of your backend (e.g. 'ws://localhost:8000')."
         )
 
-    lines = [
+    lines = header(
+        app,
+        f'Based on all ContextChannel subclasses in {app}.channels',
+    )
+    lines.extend([
+        '',
         "import { ContextChannel } from '@rxdjango/react';",
         '',
         f'const SOCKET_URL = {json.dumps(socket_url)};',
         '',
-    ]
+    ])
     for channel_cls in channels:
         endpoint = endpoints.get(channel_cls)
         lines.extend(_render_class(channel_cls, endpoint))
@@ -190,10 +196,14 @@ def _render_module(channels, endpoints):
 
 
 def _render_class(channel_cls, endpoint):
-    lines = [f'export class {channel_cls.__name__} extends ContextChannel {{']
+    lines = [
+        f'export class {channel_cls.__name__} extends ContextChannel {{',
+        '',
+    ]
     if endpoint is not None:
         lines.append(f'  protected endpoint: string = {json.dumps(endpoint)};')
         lines.append('  protected baseURL: string = SOCKET_URL;')
+        lines.append('')
     for field_name, rx_field in channel_cls._rx_fields.items():
         ts_type = _ts_type(rx_field.type)
         if rx_field.has_default:
@@ -208,6 +218,7 @@ def _render_class(channel_cls, endpoint):
             )
         lines.append(f'  {field_name}: {ts_type} = null;')
     for method in list_actions(channel_cls):
+        lines.append('')
         lines.extend(_render_action(method))
     lines.append('}')
     return lines
