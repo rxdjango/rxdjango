@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'memo',
     'testing',
     'authorization',
+    'authorization_meta',
 ]
 
 MIDDLEWARE = [

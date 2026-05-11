@@ -15,6 +15,9 @@ class ContextChannelMeta(type):
             meta.abstract = getattr(meta, 'abstract', False)
             if meta.abstract:
                 return new_class
+            new_class._action_requires = getattr(meta, 'action_requires', None)
+        else:
+            new_class._action_requires = getattr(new_class, '_action_requires', None)
 
         new_class._rx_fields = {
             key: value

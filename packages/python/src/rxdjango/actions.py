@@ -8,7 +8,10 @@ from .exceptions import ForbiddenError, ActionNotAsync
 __actions = set()
 
 
-def action(method=None, *, requires=None):
+_UNSET = object()
+
+
+def action(method=None, *, requires=_UNSET, anonymous=False):
     """Decorator to expose a ContextChannel method as a frontend-callable RPC action.
 
     Actions are automatically discovered and exported to the generated TypeScript
@@ -47,7 +50,9 @@ def action(method=None, *, requires=None):
         for i in range(len(hints)):
             if hints[i] is datetime:
                 method.__datetime_fields.append(i)
-        method.__requires = requires
+        method.__requires = None if requires is _UNSET else requires
+        method.__requires_explicit = requires is not _UNSET
+        method.__anonymous = anonymous
         return method
 
     if method is None:
@@ -68,7 +73,7 @@ def list_actions(channel):
 async def execute_action(channel, method_name, params):
     method = getattr(channel, method_name, None)
     _verify_method(method)
-    requires = _get_requires(method)
+    requires = _resolve_requires(channel, method)
     if requires is not None and not getattr(channel, requires, False):
         raise ForbiddenError(f'Action requires "{requires}"')
     for i in method.__datetime_fields:
@@ -88,6 +93,10 @@ def _verify_method(method):
         raise ForbiddenError
 
 
-def _get_requires(method):
+def _resolve_requires(channel, method):
     func = getattr(method, '__func__', method)
-    return getattr(func, '__requires', None)
+    if getattr(func, '__anonymous', False):
+        return None
+    if getattr(func, '__requires_explicit', False):
+        return getattr(func, '__requires', None)
+    return getattr(type(channel), '_action_requires', None)
