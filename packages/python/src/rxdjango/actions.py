@@ -8,7 +8,7 @@ from .exceptions import ForbiddenError, ActionNotAsync
 __actions = set()
 
 
-def action(method):
+def action(method=None, *, requires=None):
     """Decorator to expose a ContextChannel method as a frontend-callable RPC action.
 
     Actions are automatically discovered and exported to the generated TypeScript
@@ -17,34 +17,42 @@ def action(method):
     The decorated method's type hints are inspected to auto-convert parameters
     (e.g. ``datetime`` strings are converted to ``datetime`` objects).
 
+    Pass ``requires=<attr>`` to gate the action behind a truthy channel
+    attribute. When the attribute is falsy at call time, the action is
+    rejected with a 403 response without running the body.
+
     Example::
 
         @action
         async def update_status(self, status: str) -> dict:
-            # Called from frontend: await channel.updateStatus("active")
             self.instance.status = status
             self.instance.save()
             return {"success": True}
+
+        @action(requires='authorized')
+        async def increment(self):
+            self.counter += 1
     """
-    if not asyncio.iscoroutinefunction(method):
-        raise ActionNotAsync(f'@action decorator requires "{method.__name__}" to be async')
-    wrapped = method
-    # Method may be decorated, find the original method ref
-    while getattr(wrapped, '__wrapped__', None):
-        wrapped = wrapped.__wrapped__
-    # Register method to be callable
-    __actions.add(wrapped)
-    # Inspect method parameters so to make type conversions
-    # when calling method
-    hints = typing.get_type_hints(method)
-    hints.pop('return', None)
-    hints = list(hints.values())
-    method.__datetime_fields = []
-    for i in range(len(hints)):
-        if hints[i] is datetime:
-            method.__datetime_fields.append(i)
-    # Return the original method
-    return method
+    def wrap(method):
+        if not asyncio.iscoroutinefunction(method):
+            raise ActionNotAsync(f'@action decorator requires "{method.__name__}" to be async')
+        wrapped = method
+        while getattr(wrapped, '__wrapped__', None):
+            wrapped = wrapped.__wrapped__
+        __actions.add(wrapped)
+        hints = typing.get_type_hints(method)
+        hints.pop('return', None)
+        hints = list(hints.values())
+        method.__datetime_fields = []
+        for i in range(len(hints)):
+            if hints[i] is datetime:
+                method.__datetime_fields.append(i)
+        method.__requires = requires
+        return method
+
+    if method is None:
+        return wrap
+    return wrap(method)
 
 
 def list_actions(channel):
@@ -60,6 +68,9 @@ def list_actions(channel):
 async def execute_action(channel, method_name, params):
     method = getattr(channel, method_name, None)
     _verify_method(method)
+    requires = _get_requires(method)
+    if requires is not None and not getattr(channel, requires, False):
+        raise ForbiddenError(f'Action requires "{requires}"')
     for i in method.__datetime_fields:
         params[i] = datetime.fromisoformat(params[i])
     return await method(*params)
@@ -75,3 +86,8 @@ def _verify_method(method):
         method = method.__wrapped__
     if method not in __actions:
         raise ForbiddenError
+
+
+def _get_requires(method):
+    func = getattr(method, '__func__', method)
+    return getattr(func, '__requires', None)

@@ -112,7 +112,11 @@ export abstract class ContextChannel<T = unknown> {
         this._pending.delete(id);
         const err = msg.e;
         if (Array.isArray(err)) {
-          pending.reject(new Error(String(err[1] ?? "action failed")));
+          const e: Error & { code?: number } = new Error(
+            String(err[1] ?? "action failed"),
+          );
+          e.code = Number(err[0]);
+          pending.reject(e);
         } else {
           pending.resolve(msg.r);
         }

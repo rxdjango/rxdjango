@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'carousel',
     'memo',
     'testing',
+    'authorization',
 ]
 
 MIDDLEWARE = [

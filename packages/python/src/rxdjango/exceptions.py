@@ -10,7 +10,7 @@ class ForbiddenError(Exception):
     Occurs when ``has_permission()`` on the ContextChannel returns ``False``
     for the authenticated user, resulting in a 403-equivalent rejection.
     """
-    pass
+    code = 403
 
 
 class ActionNotAsync(Exception):

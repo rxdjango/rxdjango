@@ -6,7 +6,7 @@ from typing import Any
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .actions import execute_action
-from .exceptions import InvalidMessageReceived
+from .exceptions import ForbiddenError, InvalidMessageReceived
 
 
 PROTOCOL_VERSION = '0.1.0'
@@ -91,6 +91,13 @@ class ContextConsumer(AsyncWebsocketConsumer):
 
         try:
             result = await execute_action(self.channel, method_name, params)
+        except ForbiddenError as e:
+            await self.send(text_data=json.dumps({
+                't': 'ac',
+                'id': call_id,
+                'e': [403, str(e) or 'Forbidden'],
+            }))
+            return
         except Exception as e:
             await self.send(text_data=json.dumps({
                 't': 'ac',
