@@ -238,7 +238,7 @@ def _render_action(method):
     params_str = ', '.join(params)
     forwarded_str = ', '.join(forwarded)
     return [
-        f'  async {method.__name__}({params_str}) {{',
+        f'  {method.__name__} = async ({params_str}) => {{',
         f"    return await this.rx.callAction('{method.__name__}', [{forwarded_str}]);",
-        '  }',
+        '  };',
     ]
