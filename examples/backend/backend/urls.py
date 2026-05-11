@@ -17,8 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from counter.channels import CounterChannel
 from testing import views as testing_views
+from counter.channels import CounterChannel
+from carousel.channels import CarouselChannel
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,6 +27,6 @@ urlpatterns = [
 ]
 
 websocket_urlpatterns = [
-    path('ws/counter/',
-         CounterChannel.as_asgi()),
+    path('ws/counter/', CounterChannel.as_asgi()),
+    path('ws/carousel/', CarouselChannel.as_asgi()),
 ]
