@@ -20,6 +20,7 @@ from django.urls import path
 from testing import views as testing_views
 from counter.channels import CounterChannel
 from carousel.channels import CarouselChannel
+from testing.channels import TestingChannel
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,4 +30,5 @@ urlpatterns = [
 websocket_urlpatterns = [
     path('ws/counter/', CounterChannel.as_asgi()),
     path('ws/carousel/', CarouselChannel.as_asgi()),
+    path('ws/testing/', TestingChannel.as_asgi()),
 ]
