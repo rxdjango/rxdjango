@@ -32,6 +32,37 @@ REACT_SRC_DIR = REACT_PKG_DIR / 'src'
 _build_lock = threading.Lock()
 
 
+class Instruction:
+    def render(self) -> str:
+        raise NotImplementedError
+
+
+class EvalInstruction(Instruction):
+    def __init__(self, code: str):
+        self.code = code
+
+    def render(self) -> str:
+        return f'  {self.code};\n'
+
+
+class WaitInstruction(Instruction):
+    def __init__(self, condition: str, timeout: int = 2000):
+        self.condition = condition
+        self.timeout = timeout
+
+    def render(self) -> str:
+        return (
+            '  {\n'
+            '    const __start = Date.now();\n'
+            f'    while (!({self.condition})) {{\n'
+            f'      if (Date.now() - __start > {self.timeout}) '
+            f'throw new Error("wait_for timeout: {self.condition}");\n'
+            '      await new Promise((r) => setTimeout(r, 10));\n'
+            '    }\n'
+            '  }\n'
+        )
+
+
 def _latest_mtime(root: Path) -> float:
     latest = 0.0
     for dirpath, _dirnames, filenames in os.walk(root):
@@ -106,7 +137,6 @@ class RxIntegrationTestCase(ChannelsLiveServerTestCase):
 
     app_label: str = ''
     serve_static = False
-    timeout: int = 5000
 
     def setUp(self):
         super().setUp()
@@ -120,9 +150,7 @@ class RxIntegrationTestCase(ChannelsLiveServerTestCase):
         self.workdir = Path(tempfile.mkdtemp(prefix='rxdj-it-'))
         self.addCleanup(shutil.rmtree, self.workdir, ignore_errors=True)
 
-        self.setup_instructions = None
-        self.exec_instructions = None
-        self.wait_instructions = None
+        self.instructions: list[Instruction] = []
 
         with override_settings(RX_FRONTEND_DIR=str(self.workdir)):
             create_app_channels(self.app_label)
@@ -191,24 +219,19 @@ class RxIntegrationTestCase(ChannelsLiveServerTestCase):
             timeout=timeout,
         )
 
-    def setup(self, code):
-        if self.setup_instructions is not None:
-            raise Exception("Can only setup once per test")
-        self.setup_instructions = code
+    def eval(self, code: str) -> None:
+        self.instructions.append(EvalInstruction(code))
 
-    def execute(self, code):
-        if self.exec_instructions is not None:
-            raise Exception("Can only execute one instruction per test")
-        self.exec_instructions = code
+    def wait_for(self, condition: str, timeout: int = 2000) -> None:
+        self.instructions.append(WaitInstruction(condition, timeout))
 
-    def wait_for(self, code):
-        if self.wait_instructions is not None:
-            raise Exception("Can only set one wait instruction per test")
-        self.wait_instructions = code
+    def get_result(self, variable: str):
+        body = ''.join(instr.render() for instr in self.instructions)
 
-    def get_state(self, variable):
-        code = f'import {{ {self.channel} }} from "./{self.app_label}/{self.app_label}.channels.ts";\n'
-        code += r"""
+        code = (
+            f'import {{ {self.channel} }} from '
+            f'"./{self.app_label}/{self.app_label}.channels.ts";\n'
+            r"""
 const wsUrl = process.argv[2];
 if (!wsUrl) {
   console.error("usage: runner.ts <ws-url>");
@@ -216,7 +239,7 @@ if (!wsUrl) {
 }
 
 async function main() {
-  const channel: any = new (""" + self.channel + """ as any)(wsUrl);
+  const channel: any = new (""" + self.channel + r""" as any)(wsUrl);
 
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("connect timeout")), 5000);
@@ -226,27 +249,8 @@ async function main() {
       resolve();
     });
   });
-"""
-        code += f'\n{self.setup_instructions};\n'
-        code += r"""
-
-  // Subscribe before executing so we don't miss the diff
-  const waitDone = new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("wait_for timeout")), """ + f'{self.timeout}' + r""");
-    const unsub = channel.rx.subscribe(() => {
-      if (""" + self.wait_instructions + r""") {
-        clearTimeout(timer);
-        unsub();
-        resolve();
-      }
-    });
-  });
-"""
-        code += f'\n{self.exec_instructions};\n'
-        code += r"""
-  await waitDone;
-
-  process.stdout.write(JSON.stringify(""" + variable + """));
+""" + body + r"""
+  process.stdout.write(JSON.stringify(""" + variable + r"""));
   process.exit(0);
 }
 
@@ -255,6 +259,7 @@ main().catch((err) => {
   process.exit(1);
 });
 """
+        )
 
         self.write_runner(code)
         result = self.run_node('runner.ts', self.ws_url(self.url))
@@ -264,8 +269,6 @@ main().catch((err) => {
             f'node runner failed:\nstdout={result.stdout}\nstderr={result.stderr}',
         )
 
-        self.setup_instructions = None
-        self.exec_instructions = None
-        self.wait_instructions = None
+        self.instructions = []
 
         return json.loads(result.stdout)

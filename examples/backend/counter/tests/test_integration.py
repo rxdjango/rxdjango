@@ -73,9 +73,9 @@ class CounterIntegrationTests(RxIntegrationTestCase):
     url = '/ws/counter/'
 
     def test_increment_action_reflects_in_frontend_counter(self):
-        self.setup('const before = channel.counter')
-        self.execute('await channel.increment()')
+        self.eval('const before = channel.counter')
+        self.eval('await channel.increment()')
         self.wait_for('channel.counter !== before')
-        counter = self.get_state('channel.counter')
+        counter = self.get_result('channel.counter')
 
         self.assertEqual(counter, 1)
