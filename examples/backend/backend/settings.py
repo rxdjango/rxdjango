@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'channels',
 
     'counter',
+    'carousel',
     'testing',
 ]
 
