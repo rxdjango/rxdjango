@@ -29,5 +29,9 @@ a row to the index below in the same PR.
 | ---- | ----- | ---- | ------ |
 | 0002 | [Define the core WebSocket protocol envelope](0002-core-websocket-protocol.md) | 2026-05-09 | Active |
 | 0003 | [Inherit the ContextChannel surface from rxdjango v0.0.x](0003-inherit-context-channel-surface.md) | 2026-05-11 | Active |
+| 0004 | [The `rx[type](default)` reactive field](0004-rx-type-reactive-field.md) | 2026-05-11 | Active |
+| 0005 | [String references to reactive fields](0005-string-references-to-reactive-fields.md) | 2026-05-11 | Active |
+| 0006 | [`@memo` derived reactive fields](0006-memo-derived-reactive-fields.md) | 2026-05-11 | Active |
+| 0007 | [Action authorization via a reactive gate field](0007-action-authorization-via-rx-gate.md) | 2026-05-11 | Active |
 
 Status is `Active` by default. Use `Superseded by ADR-NNNN` when replaced.
