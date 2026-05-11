@@ -3,8 +3,10 @@ import { IndexPage } from './IndexPage';
 import { CounterPage } from './examples/counter/CounterPage';
 import { CarouselPage } from './examples/carousel/CarouselPage';
 import { MemoPage } from './examples/memo/MemoPage';
+import { AuthorizationPage } from './examples/authorization/AuthorizationPage';
+import { AuthorizationMetaPage } from './examples/authorization_meta/AuthorizationMetaPage';
 
-type View = 'index' | 'counter' | 'carousel' | 'memo';
+type View = 'index' | 'counter' | 'carousel' | 'memo' | 'authorization' | 'authorization_meta';
 
 interface ExampleMeta {
   title: string;
@@ -15,6 +17,8 @@ const examples: Record<Exclude<View, 'index'>, ExampleMeta> = {
   counter: { title: 'Counter', render: () => <CounterPage /> },
   carousel: { title: 'Carousel', render: () => <CarouselPage /> },
   memo: { title: 'Memo', render: () => <MemoPage /> },
+  authorization: { title: 'Authorization', render: () => <AuthorizationPage /> },
+  authorization_meta: { title: 'Authorization Meta', render: () => <AuthorizationMetaPage /> },
 };
 
 function pathToView(pathname: string): View {

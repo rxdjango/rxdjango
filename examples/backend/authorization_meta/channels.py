@@ -10,7 +10,7 @@ class AuthorizationMetaChannel(ContextChannel):
         action_requires = 'authorized'
 
     @action(anonymous=True)
-    async def authorize(self, password):
+    async def authorize(self, password: str):
         if password == 'password':
             self.authorized = True
             return True

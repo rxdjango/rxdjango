@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface IndexPageProps {
-  onSelect: (name: 'counter' | 'carousel' | 'memo') => void;
+  onSelect: (name: 'counter' | 'carousel' | 'memo' | 'authorization' | 'authorization_meta') => void;
 }
 
 export function IndexPage({ onSelect }: IndexPageProps) {
@@ -47,6 +47,28 @@ export function IndexPage({ onSelect }: IndexPageProps) {
             }}
           >
             Memo
+          </a>
+        </li>
+        <li>
+          <a
+            href="/authorization"
+            onClick={(event) => {
+              event.preventDefault();
+              onSelect('authorization');
+            }}
+          >
+            Authorization
+          </a>
+        </li>
+        <li>
+          <a
+            href="/authorization_meta"
+            onClick={(event) => {
+              event.preventDefault();
+              onSelect('authorization_meta');
+            }}
+          >
+            Authorization Meta
           </a>
         </li>
       </ul>
