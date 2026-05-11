@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface IndexPageProps {
-  onSelect: (name: 'counter' | 'carousel') => void;
+  onSelect: (name: 'counter' | 'carousel' | 'memo') => void;
 }
 
 export function IndexPage({ onSelect }: IndexPageProps) {
@@ -36,6 +36,17 @@ export function IndexPage({ onSelect }: IndexPageProps) {
             }}
           >
             Carousel
+          </a>
+        </li>
+        <li>
+          <a
+            href="/memo"
+            onClick={(event) => {
+              event.preventDefault();
+              onSelect('memo');
+            }}
+          >
+            Memo
           </a>
         </li>
       </ul>

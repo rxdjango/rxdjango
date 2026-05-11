@@ -2,8 +2,9 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import { IndexPage } from './IndexPage';
 import { CounterPage } from './examples/counter/CounterPage';
 import { CarouselPage } from './examples/carousel/CarouselPage';
+import { MemoPage } from './examples/memo/MemoPage';
 
-type View = 'index' | 'counter' | 'carousel';
+type View = 'index' | 'counter' | 'carousel' | 'memo';
 
 interface ExampleMeta {
   title: string;
@@ -13,6 +14,7 @@ interface ExampleMeta {
 const examples: Record<Exclude<View, 'index'>, ExampleMeta> = {
   counter: { title: 'Counter', render: () => <CounterPage /> },
   carousel: { title: 'Carousel', render: () => <CarouselPage /> },
+  memo: { title: 'Memo', render: () => <MemoPage /> },
 };
 
 function pathToView(pathname: string): View {
