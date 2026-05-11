@@ -16,7 +16,7 @@ export function CarouselPage() {
       <p>
         First letter: {channel.first_letter}
       </p>
-      <button onClick={() => channel.increment()}>
+      <button onClick={channel.rotate}>
         Next
       </button>
     </div>

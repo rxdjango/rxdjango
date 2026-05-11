@@ -10,7 +10,7 @@ export function CounterPage() {
       <p>
         Value: {channel.counter}
       </p>
-      <button onClick={() => channel.increment()}>
+      <button onClick={channel.increment}>
         Increment
       </button>
     </div>
