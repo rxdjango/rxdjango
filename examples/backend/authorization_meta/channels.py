@@ -16,6 +16,6 @@ class AuthorizationMetaChannel(ContextChannel):
             return True
         return False
 
-    @action()
+    @action
     async def increment(self):
         self.counter += 1
