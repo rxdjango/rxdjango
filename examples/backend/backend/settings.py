@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'rxdjango',
+    'rxdjango_model',
     'daphne',
     'django.contrib.staticfiles',
     'channels',
