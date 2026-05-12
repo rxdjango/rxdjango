@@ -13,6 +13,6 @@ channel.
 
 ## Frontend
 
-```{literalinclude} ../../examples/frontend/src/app/examples/authorization/AuthorizationPage.tsx
+```{literalinclude} ../../examples/frontend/src/app/examples/authorization/demo.tsx
 :language: tsx
 ```

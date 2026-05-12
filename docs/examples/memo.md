@@ -12,6 +12,6 @@ values and explicit dependency tracking on the channel.
 
 ## Frontend
 
-```{literalinclude} ../../examples/frontend/src/app/examples/memo/MemoPage.tsx
+```{literalinclude} ../../examples/frontend/src/app/examples/memo/demo.tsx
 :language: tsx
 ```

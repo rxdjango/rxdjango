@@ -12,6 +12,6 @@ can keep a small graph of state consistent in one action.
 
 ## Frontend
 
-```{literalinclude} ../../examples/frontend/src/app/examples/carousel/CarouselPage.tsx
+```{literalinclude} ../../examples/frontend/src/app/examples/carousel/demo.tsx
 :language: tsx
 ```

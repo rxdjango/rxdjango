@@ -12,6 +12,6 @@ see the value update everywhere it is displayed.
 
 ## Frontend
 
-```{literalinclude} ../../examples/frontend/src/app/examples/counter/CounterPage.tsx
+```{literalinclude} ../../examples/frontend/src/app/examples/counter/demo.tsx
 :language: tsx
 ```

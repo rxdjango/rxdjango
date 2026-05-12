@@ -1,28 +1,40 @@
 import React from 'react';
-import { useChannel } from '@rxdjango/react';
-import { CarouselChannel } from '../../rx/carousel/carousel.channels';
-import { Demo, Fields, Field, Button } from '../../components/demo';
+import { CarouselDemo } from './demo';
+import {
+  ExampleLayout,
+  ExampleSection,
+  ExampleSectionHeading,
+  ExampleDescription,
+  ExampleClientBadge,
+} from '../../components/ExampleLayout';
+import { SourceFile } from '../../components/SourceFile';
 
 export function CarouselPage() {
-  const channel = useChannel(CarouselChannel);
-
   return (
-    <Demo>
-      <Fields>
-        <Field label="Selected">
-          {channel.selected}
-        </Field>
-        <Field label="Fruit">
-          {channel.fruit}
-        </Field>
-        <Field label="First letter">
-          {channel.first_letter}
-        </Field>
-      </Fields>
-      <Button onClick={channel.rotate}>
-        Next
-      </Button>
-    </Demo>
+    <ExampleLayout title="Carousel" demo={<CarouselDemo />}>
+      <ExampleSection position="first">
+        <ExampleDescription>
+          Three related reactive fields—selected index, fruit name, and first
+          letter—updated together when you call rotate. Shows how the backend
+          can keep a small graph of state consistent in one action.
+        </ExampleDescription>
+      </ExampleSection>
+      <ExampleSection ariaLabelledBy="carousel-backend">
+        <ExampleSectionHeading id="carousel-backend">
+          Backend
+        </ExampleSectionHeading>
+        <SourceFile path="carousel/channels.py" />
+      </ExampleSection>
+      <ExampleSection ariaLabelledBy="carousel-frontend" position="last">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <ExampleSectionHeading id="carousel-frontend">
+            Frontend
+          </ExampleSectionHeading>
+          <ExampleClientBadge />
+        </div>
+        <SourceFile path="carousel/demo.tsx" />
+      </ExampleSection>
+    </ExampleLayout>
   );
 }
 
