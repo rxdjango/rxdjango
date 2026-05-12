@@ -49,6 +49,7 @@ class MakeFrontendTestingTests(FrontendTestCase):
         m = find_member(self._cls, 'do_action')
         self.assertIsNotNone(m, 'action method `do_action` not found')
         self.assertEqual(m['kind'], 'method')
+        self.assertTrue(m['async'], 'action must be emitted as async')
         self.assertEqual(
             m['params'],
             [
