@@ -258,10 +258,10 @@ export function Main() {
           })}
         </nav>
       </aside>
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain bg-primary-100/50">
-        <div className="mx-auto w-full max-w-8xl px-6 py-10">
-          {view === 'index' ? (
-            <div>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-primary-100/50">
+        {view === 'index' ? (
+          <div className="flex-1 overflow-y-auto overscroll-y-contain">
+            <div className="mx-auto w-full max-w-8xl px-6 py-10">
               <h1 className="text-2xl font-semibold tracking-tight text-ink">
                 RxDjango demo
               </h1>
@@ -271,16 +271,17 @@ export function Main() {
                 channels. Pick an example from the sidebar to see it in action.
               </p>
             </div>
-          ) : (
-            <div className="flex min-h-0 flex-col">
-              <h1 className="text-2xl font-semibold tracking-tight text-ink">
-                {examples[view].title}
-              </h1>
-              <div className="mt-6 grid min-h-0 w-full grid-cols-1 gap-0 divide-y divide-ink/68 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-stretch lg:gap-12 lg:divide-y-0">
-                <div
-                  className="flex min-h-0 min-w-0 flex-col divide-y divide-ink/68 pb-10 lg:border-r lg:border-ink/68 lg:pb-0 lg:pr-10"
-                  aria-label="Documentation"
-                >
+          </div>
+        ) : (
+          <div className="mx-auto flex w-full min-h-0 max-w-8xl flex-1 flex-col px-6 py-10">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              {examples[view].title}
+            </h1>
+            <div className="mt-6 grid min-h-0 w-full flex-1 grid-cols-1 gap-0 divide-y divide-ink/68 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-stretch lg:gap-12 lg:divide-y-0">
+              <div
+                className="flex min-h-0 min-w-0 flex-col divide-y divide-ink/68 pb-10 lg:overflow-y-auto lg:overscroll-y-contain lg:border-r lg:border-ink/68 lg:pb-0 lg:pr-10"
+                aria-label="Documentation"
+              >
                   <div className="pb-8">
                     <p className="text-sm leading-relaxed text-primary-800">
                       {examples[view].description}
@@ -339,8 +340,8 @@ export function Main() {
                   </section>
                 </div>
                 <div className="flex min-h-0 min-w-0 w-full flex-col pt-10 lg:pt-0">
-                  <div className="flex min-h-0 w-full flex-col rounded-lg bg-white shadow-md lg:sticky lg:top-10 lg:z-10 lg:max-w-full lg:self-start lg:shadow-lg">
-                    <div className="flex min-h-0 max-h-[calc(100dvh-7.5rem)] flex-col overflow-y-auto overscroll-y-contain px-1 pt-0 sm:px-0 lg:max-h-[calc(100dvh-9rem)] lg:p-6">
+                  <div className="flex min-h-0 w-full flex-1 flex-col rounded-lg bg-white shadow-md lg:z-10 lg:max-w-full lg:self-stretch lg:shadow-lg">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-1 pt-0 sm:px-0 lg:p-6">
                       <section aria-labelledby={`${view}-usage`}>
                         <h2 id={`${view}-usage`} className={usageHeadingClass}>
                           Usage
@@ -355,7 +356,6 @@ export function Main() {
               </div>
             </div>
           )}
-        </div>
       </main>
     </div>
   );
