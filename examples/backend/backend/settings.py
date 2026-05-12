@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'testing',
     'authorization',
     'authorization_meta',
+
+    'simple_model',
 ]
 
 MIDDLEWARE = [
