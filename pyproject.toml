@@ -12,6 +12,7 @@ dependencies = [
     "rxdjango",
     "sphinx>=8.2.3",
     "rxdjango-model",
+    "daphne>=4.1.0",
 ]
 
 [tool.uv.sources]
