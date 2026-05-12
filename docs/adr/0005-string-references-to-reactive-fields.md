@@ -66,9 +66,10 @@ containing the field's attribute name**.
 ## Consequences
 
 ### Positive
-- The convention composes with ADR-0004 without compromise. Class-body
-  expressions still read as ordinary Python on the value, and a string
-  reference is unambiguously *not* an attempt to use the value.
+- Very simple to write and implement on this stage, while still allowing
+  future support of fields directly
+- Django already uses hybrid string/referencing for ForeignKeys, so
+  supporting strings is not weird.
 - One mechanism serves every cross-field reference site (`@memo`,
   authorization `requires=`, future consumers), so a developer learns
   it once.
@@ -104,36 +105,10 @@ containing the field's attribute name**.
 ## Alternatives Considered
 
 ### Option A: Pass the descriptor — `@memo(selected)`
-Rejected because ADR-0004 defines the class-body representative of a
-reactive field to *be* an instance of `T`. `@memo(selected)` would pass
-the integer `0`, not a handle. Preserving descriptor access for this
-case would require either giving up ADR-0004's transparency property or
-introducing a second, parallel name for "the descriptor of `selected`"
-— both of which cost more than the string convention does.
-
-### Option B: A sibling sentinel — `@memo(Rx.selected)` or `@memo(channel.selected)`
-A namespace object that exposes field descriptors under their names,
-distinct from the class body's value-typed attributes. Rejected
-because it introduces a second way to refer to the same field
-(descriptor-via-sentinel vs. value-via-name) and a new top-level
-import or class attribute that exists solely for cross-reference
-syntax. Strings carry less surface area for the same expressiveness in
-the top-level-names-only scope this ADR pins.
-
-### Option C: A typed reference wrapper — `@memo(Ref('selected'))`
-A wrapper class that holds the name string and exists to make the
-"this is a field reference" intent explicit at the call site.
-Rejected as ceremony — the call site is already inside a decorator
-whose signature documents what its argument means. The wrapper would
-not enable any additional validation that a plain string does not, given
-class-definition-time resolution.
-
-### Option D: Lazy/runtime-only validation of names
-Resolve string references on first access rather than at class
-definition. Rejected because it pushes the failure mode from "import
-fails loudly" to "the channel works until a specific dependency is
-read." Class-definition-time validation is feasible (the channel
-metaclass already sees every declaration) and strictly more useful.
+This is a good syntax, that will probably be implemented in the future.
+It requires some wiring: ContextChannel metaclass needs to inject the
+field name in each RxField at compile time so this field name can be
+recovered.
 
 ## References
 

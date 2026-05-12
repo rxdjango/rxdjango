@@ -19,7 +19,10 @@ import typing as _typing
 
 _UNSET = object()
 _NoneType = type(None)
-_SUBCLASSABLE = (int, str, float, bool)
+_SUPPORTED = (int, str, float, bool)
+# bool is in _SUPPORTED for type-checking but is excluded here because
+# CPython forbids subclassing it (see ADR-0008).
+_SUBCLASSABLE = (int, str, float)
 
 
 class RxField:
@@ -35,7 +38,7 @@ class RxField:
     def __class_getitem__(cls, t):
         allowed = _resolve_allowed(t)
         for a in allowed:
-            if a is not _NoneType and a not in _SUBCLASSABLE:
+            if a is not _NoneType and a not in _SUPPORTED:
                 raise TypeError(
                     f'rx[{_fmt_type(t)}]: only int, str, float, bool, '
                     f'and None are supported'
@@ -62,6 +65,10 @@ class RxField:
                     f'is not one of allowed types: {_fmt_allowed(allowed)}'
                 )
             base = type(initial)
+            if base not in _SUBCLASSABLE:
+                # bool falls here: cannot be subclassed, so skip the
+                # "descriptor is a T" trick (ADR-0008).
+                return _PlainRxField(t, allowed, default=initial, has_default=True)
             typed_cls = _make_typed_field(base)
             inst = typed_cls.__new__(typed_cls, initial)
             inst._bind(t, allowed, initial)
@@ -97,6 +104,12 @@ class _PlainRxField(RxField):
             consumer.enqueue_rx(self.name, value)
         if old != value:
             _propagate_to_memos(obj, self.name)
+
+    def __bool__(self):
+        return bool(self.default)
+
+    def __repr__(self):
+        return f'rx[{_fmt_type(self.type)}]({self.default!r})'
 
 
 def _propagate_to_memos(obj, changed_name):

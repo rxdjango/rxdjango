@@ -3,7 +3,7 @@ from rxdjango import ContextChannel, rx, action
 
 class AuthorizationMetaChannel(ContextChannel):
 
-    authorized: bool = False
+    authorized = rx[bool](False)
     counter = rx[int](0)
 
     class Meta:

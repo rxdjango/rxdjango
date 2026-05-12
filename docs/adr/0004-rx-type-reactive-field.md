@@ -5,22 +5,13 @@
 
 ## Context
 
-ADR-0003 inherits the v0.0.x developer surface — `ContextChannel`,
-`@action`, the consumer, the URL routing, the `makefrontend` codegen — but
-deliberately defers the question of *how a reactive field is declared on
-the channel class body*. v0.0.x's answer was tied to its serializer-driven
-state graph; v0.1 wants a smaller, more direct primitive for the common
-case of "a single typed cell that the client observes."
+In v0.0.x series, updates were defined by Meta.state and RuntimeState
+inner class. That was very nested and non pythonic. For the rebuild, we
+start with the latter, runtime reactive variable, to build a solid
+primitive syntax. This is the core of RxDjango, and takes the name of "rx",
+a reactive field declaration.
 
-The shape this primitive takes is consequential beyond syntax. The
-declaration appears in the class body — the same place the developer
-writes initial values, computes derived defaults, and (in non-trivial
-examples) references one field's value to seed another's. Any reactive
-field machinery that forces unwrapping at the declaration site (`rx[int]
-(0).value`, `selected.get()`) or that breaks ordinary Python operators
-infects every example the developer reads on day one.
-
-The counter and carousel examples make the requirement concrete:
+The counter and carousel examples show how this new primitive works:
 
 ```python
 # counter
@@ -61,9 +52,7 @@ parameter must be recoverable from the declaration without import-time
 annotation parsing.
 
 This ADR pins the declaration. It does not commit to a specific set of
-supported value types — that set will grow over time (lists are an
-expected future direction) — and the rules for `None`/optional handling
-are an implementation matter that may evolve.
+supported value types — that set will grow over time.
 
 ## Decision
 
@@ -100,12 +89,11 @@ that the resulting object behaves as a `T` in the class body.
 - Class-body code reads as ordinary Python. `FRUITS[selected]`,
   `fruit[0]`, `selected + 1` need no wrapper-aware idioms; the carousel
   example is legible to a Python developer with no RxDjango knowledge.
+- Support for the state is done via special rx fields (to come later),
+  so runtime and database states share the same interface style.
 - The type parameter is syntactically present and machine-readable at
   class-definition time, so `makefrontend` can derive TypeScript types
   without parsing annotations or running a separate type-checker pass.
-- The declaration is a single expression, so the line that introduces a
-  reactive cell is also the line that initialises it — no split between
-  "declare here, default elsewhere."
 - The same surface scales to richer `T`s without changing how a
   declaration is written: a future `rx[list[str]]([])` reads the same as
   `rx[int](0)`.
@@ -136,37 +124,6 @@ that the resulting object behaves as a `T` in the class body.
   framework does not promise full PEP 695 compatibility — `rx` is a
   factory, not a type.
 
-## Alternatives Considered
-
-### Option A: Annotation form — `counter: rx[int] = 0`
-A PEP 526 class-variable annotation with the default on the right-hand
-side, as sketched in RFC-0001. Rejected because the value seen on the
-class body (the integer `0`, the string `"banana"`) is then *only* the
-plain default — class-body expressions that want to reference one field
-when computing another (`FRUITS[selected]`, `fruit[0]`) have no
-descriptor to bind to. The carousel example would not be expressible
-without separately re-stating each value.
-
-### Option B: Explicit descriptor — `counter = RxField(int, 0)`
-A conventional descriptor that takes the type positionally. Rejected on
-two grounds: the type lives inside the descriptor call rather than as
-a syntactic parameter (less natural for tooling and codegen), and the
-descriptor's class-body identity is just "an `RxField`" — class-body
-expressions on the declared name see a wrapper, not the underlying value.
-The carousel's class-body subscripting becomes wrapper-aware code.
-
-### Option C: DRF-style declarative fields — `counter = IntegerField(default=0)`
-Mirrors the DRF serializer-field idiom. Rejected because it conflates
-serialization fields with reactive cells — two different concepts that
-later ADRs will need to keep distinct (reactive serializers are a
-separate, deferred subject) — and because it locks the framework into
-one field class per supported type, which scales poorly compared to a
-single type-parameterised factory.
-
-### Option D: Hook-style — `counter = use_rx(int, 0)`
-A React-flavoured hook expression. Rejected because hooks imply a
-calling context (the render function); class-body declarations have no
-such context, and the analogy misleads more than it informs.
 
 ## References
 

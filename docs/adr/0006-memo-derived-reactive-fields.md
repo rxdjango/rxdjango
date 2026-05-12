@@ -63,11 +63,11 @@ class CarouselMemoChannel(ContextChannel):
         self.selected = (self.selected + 1) % len(self.FRUITS)
 
     @memo('selected')
-    def fruit(self):
+    def fruit(self) -> str:
         return self.FRUITS[self.selected]
 
     @memo('fruit')
-    def first_letter(self):
+    def first_letter(self) -> str:
         return self.fruit[0]
 ```
 
@@ -156,51 +156,6 @@ The semantics:
   mutation. If a future ADR introduces structured reactive fields,
   the rules for what counts as a "change" to such a field will be
   defined there, not here.
-
-## Alternatives Considered
-
-### Option A: Derived fields as `rx[T]` with manual updates
-Keep only `rx` fields; expect the developer to reassign them inside
-every action. Rejected because it is exactly the boilerplate the
-framework exists to remove; the carousel example shows how quickly the
-restatements accumulate.
-
-### Option B: Auto-tracked dependencies (no explicit `deps` argument)
-A `@memo` decorator that introspects the function — at call time or
-via attribute-access tracing — and infers dependencies. Rejected
-because it conflicts with ADR-0004: the class-body name of an `rx`
-field is the *value*, not a tracked proxy, so a memo body like
-`self.FRUITS[self.selected]` performs ordinary attribute access and
-list indexing with no hook for the framework to observe. Making it
-observable would require giving up the transparency property of
-ADR-0004. Explicit string deps preserve that property and serve as
-checkable documentation.
-
-### Option C: Lazy recomputation on read
-Mark the memo dirty when a dep changes; recompute on the next read.
-Rejected because clients receive state via push, not pull — the diff
-emitter is itself a reader, but it runs at the end of every action,
-so "lazy on read" effectively reduces to "eager at action end" with
-extra bookkeeping. Plain eager recomputation is simpler and easier to
-reason about, at the cost of redundant work within a multi-write
-action (see trade-offs above).
-
-### Option D: Writable derived fields
-Permit `self.fruit = ...` and treat the next dep change as
-overriding. Rejected because it gives the field two competing sources
-of truth and makes its value at any moment depend on assignment
-history rather than on the declared derivation. The use cases it
-serves are better expressed as an `rx` field with the developer's
-chosen update logic.
-
-### Option E: Backend-only memos
-Treat `@memo` as a server-side convenience that does not cross the
-wire. Rejected because the motivating example (carousel) and the
-expected consumer (authorization) both want the derived value
-observable. A separate annotation for "server-only computation" can
-be added later without affecting this surface; defaulting to invisible
-would push the carousel back into reassigning `rx` fields just to make
-the value visible to the client.
 
 ## References
 
