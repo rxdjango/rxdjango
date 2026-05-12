@@ -28,11 +28,11 @@ Depends on `extract`. Then runs `npm --prefix examples/frontend run build`, whic
 
 Depends on `docs` and `examples` (so both run, each pulling `extract` in turn — but `extract` is idempotent so the double-trigger is a no-op the second time). Then:
 
-1. `rm -rf site/_build/html/examples`
-2. `mkdir -p site/_build/html/examples`
-3. `cp -R examples/frontend/build/. site/_build/html/examples/`
+1. `rm -rf site/_build/html/react`
+2. `mkdir -p site/_build/html/react`
+3. `cp -R examples/frontend/build/. site/_build/html/react/`
 
-End state: one self-contained directory (`site/_build/html/`) holding the Sphinx HTML at the root and the React app under `/examples/`. That's what you'd publish. Note: for this to actually work in production, `demo_base_url` would need to point at `/examples` (or the deployed URL) instead of `localhost:3000` — currently the iframes will still target localhost. Worth tightening when you wire up deployment.
+End state: one self-contained directory (`site/_build/html/`) holding the Sphinx HTML at the root and the React app under `/react/`. That's what you'd publish. Note: for this to actually work in production, `demo_base_url` would need to point at `/react` (or the deployed URL) instead of `localhost:3000` — currently the iframes will still target localhost. Worth tightening when you wire up deployment.
 
 ## `make dev`
 

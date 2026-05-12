@@ -17,7 +17,7 @@ FRONTEND      = examples/frontend
 SITE          = site
 SITE_BUILD    = $(SITE)/_build/html
 FRONT_BUILD   = $(FRONTEND)/build
-EXAMPLES_OUT  = $(SITE_BUILD)/examples
+EXAMPLES_OUT  = $(SITE_BUILD)/react
 
 .DEFAULT_GOAL := help
 

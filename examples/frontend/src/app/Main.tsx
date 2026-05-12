@@ -2,8 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { RxDjangoLogo } from './RxDjangoLogo';
 import { pages, type Page } from './examples/pages.generated';
 
+// CRA sets PUBLIC_URL from package.json "homepage" at build time;
+// it is "" in dev and e.g. "/react" in production.
+const BASENAME = (process.env.PUBLIC_URL || '').replace(/\/+$/, '');
+
+function stripBasename(pathname: string): string {
+  if (BASENAME && pathname.startsWith(BASENAME)) {
+    return pathname.slice(BASENAME.length) || '/';
+  }
+  return pathname;
+}
+
+function withBasename(path: string): string {
+  return `${BASENAME}${path}`;
+}
+
 function pageForPath(pathname: string): Page | null {
-  const segment = pathname.replace(/^\/+|\/+$/g, '');
+  const segment = stripBasename(pathname).replace(/^\/+|\/+$/g, '');
   return pages.find(([app]) => app === segment) ?? null;
 }
 
@@ -30,7 +45,7 @@ export function Main() {
   }, []);
 
   const navigate = (page: Page | null) => {
-    const path = page == null ? '/' : `/${page[0]}`;
+    const path = withBasename(page == null ? '/' : `/${page[0]}`);
 
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
@@ -60,7 +75,7 @@ export function Main() {
         </div>
         <nav className="flex flex-1 flex-col gap-0 p-2" aria-label="Examples">
           <a
-            href="/"
+            href={withBasename('/')}
             className={navLinkClass(active == null)}
             onClick={(event) => {
               event.preventDefault();
@@ -74,7 +89,7 @@ export function Main() {
             return (
               <a
                 key={app}
-                href={`/${app}`}
+                href={withBasename(`/${app}`)}
                 className={navLinkClass(activeApp === app)}
                 onClick={(event) => {
                   event.preventDefault();
