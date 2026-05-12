@@ -6,6 +6,7 @@ import { MemoPage } from './examples/memo/MemoPage';
 import { AuthorizationPage } from './examples/authorization/AuthorizationPage';
 import { AuthorizationMetaPage } from './examples/authorization_meta/AuthorizationMetaPage';
 import { UsageShell } from './UsageShell';
+import { SourceCodeBlock } from './components/SourceCodeBlock';
 
 type View = 'index' | 'counter' | 'carousel' | 'memo' | 'authorization' | 'authorization_meta';
 
@@ -24,41 +25,6 @@ const sectionHeadingClass =
 
 const usageHeadingClass =
   `${sectionHeadingClass} border-b border-ink/58 mb-2 p-4`;
-
-function SourceCodeBlock({ code }: { code: string }) {
-  const lines = code.split('\n');
-
-  return (
-    <div
-      className="mt-2 overflow-x-auto rounded-md border border-ink/50 bg-primary-900 font-mono text-xs leading-relaxed"
-      role="region"
-      aria-label="Source code"
-    >
-      <div className="flex py-3">
-        <div
-          aria-hidden="true"
-          className="sticky left-0 z-10 shrink-0 select-none border-r border-ink/55 bg-primary-900 py-0 pl-3 pr-4 text-right tabular-nums text-white/70"
-        >
-          {lines.map((_, index) => (
-            <div key={index} className="min-h-[1.375rem]">
-              {index + 1}
-            </div>
-          ))}
-        </div>
-        <div className="min-w-0 flex-1 pl-5 pr-4">
-          {lines.map((line, index) => (
-            <div
-              key={index}
-              className="min-h-[1.375rem] whitespace-pre text-primary-100"
-            >
-              {line.length === 0 ? '\u00a0' : line}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const examples: Record<Exclude<View, 'index'>, ExampleMeta> = {
   counter: {
@@ -299,7 +265,7 @@ export function Main() {
                         Failed to load source: {sourceError}
                       </p>
                     ) : backendSnippet != null ? (
-                      <SourceCodeBlock code={backendSnippet} />
+                      <SourceCodeBlock code={backendSnippet} language="python" />
                     ) : (
                       <p className="mt-2 text-sm leading-relaxed text-primary-700">
                         Loading…
@@ -331,7 +297,7 @@ export function Main() {
                         Failed to load source: {sourceError}
                       </p>
                     ) : frontendSnippet != null ? (
-                      <SourceCodeBlock code={frontendSnippet} />
+                      <SourceCodeBlock code={frontendSnippet} language="typescript" />
                     ) : (
                       <p className="mt-2 text-sm leading-relaxed text-primary-700">
                         Loading…
