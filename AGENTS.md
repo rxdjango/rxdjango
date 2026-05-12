@@ -55,7 +55,8 @@ Accepted architectural decisions are recorded in `docs/adr/` as ADRs. They are *
 The example pages shown in `examples/frontend/` are *generated* from the MyST docs in `docs/examples/`. Do not hand-edit the generated files.
 
 - Source: `docs/examples/index.md` (toctree → ordering) and `docs/examples/<slug>.md` (H1 → title, lead paragraph → description, each `## Section` + `literalinclude` → a page section).
-- Generator: `tools/docgen/docgen.py` (stdlib Python, no extra deps). Run with `python3 tools/docgen/docgen.py` from the repo root.
+- Generator: `tools/docgen/docgen.py` (stdlib Python, no extra deps). Run with `make extract` (or `python3 tools/docgen/docgen.py` directly) from the repo root.
+- Build orchestration lives in the root `Makefile`: `make docs` (Sphinx → `site/_build/html`), `make examples` (React → `examples/frontend/build`), `make site` (both, stitched), `make dev` (sphinx-autobuild + react dev server in parallel), `make check` (docgen + `tsc --noEmit`). All build targets depend on `extract`.
 - Generated outputs (carry a `// @generated` header — never edit by hand):
   - `examples/frontend/src/app/examples/<slug>/<Pascal>Page.tsx`
   - `examples/frontend/src/app/examples/pages.generated.ts` (consumed by `Main.tsx`)
