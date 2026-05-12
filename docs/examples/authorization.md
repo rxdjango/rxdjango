@@ -14,5 +14,5 @@ channel.
 ## Frontend
 
 ```{literalinclude} ../../examples/frontend/src/app/examples/authorization/AuthorizationPage.tsx
-:language: typescript
+:language: tsx
 ```

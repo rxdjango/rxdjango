@@ -13,5 +13,5 @@ as Authorization, but the rule is expressed once on the channel class.
 ## Frontend
 
 ```{literalinclude} ../../examples/frontend/src/app/examples/authorization_meta/AuthorizationMetaPage.tsx
-:language: typescript
+:language: tsx
 ```

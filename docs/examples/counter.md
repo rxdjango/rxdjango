@@ -13,5 +13,5 @@ see the value update everywhere it is displayed.
 ## Frontend
 
 ```{literalinclude} ../../examples/frontend/src/app/examples/counter/CounterPage.tsx
-:language: typescript
+:language: tsx
 ```

@@ -13,5 +13,5 @@ can keep a small graph of state consistent in one action.
 ## Frontend
 
 ```{literalinclude} ../../examples/frontend/src/app/examples/carousel/CarouselPage.tsx
-:language: typescript
+:language: tsx
 ```
