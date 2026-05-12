@@ -21,7 +21,7 @@ html_use_index = False
 html_domain_indices = False
 
 # Base URL where the live demo React app is served. Each example is loaded
-# in an iframe at "<demo_base_url>/<example_name>".
+# in an iframe at "<demo_base_url>/react/<example_name>/demo".
 demo_base_url = 'http://localhost:3000'
 
 html_context = {

@@ -71,6 +71,23 @@ export function ExampleClientBadge() {
   );
 }
 
+export function ExampleDemoBox({ demo }: { demo: ReactNode }) {
+  return (
+    <div className="flex min-h-0 w-full flex-1 flex-col rounded-lg bg-white shadow-md lg:z-10 lg:max-w-full lg:self-stretch lg:shadow-lg">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-1 pt-0 sm:px-0 lg:p-6">
+        <section>
+          <h2 className={usageHeadingClass}>
+            Usage
+          </h2>
+          <UsageShell>
+            {demo}
+          </UsageShell>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export function ExampleLayout({
   title,
   demo,
@@ -93,18 +110,7 @@ export function ExampleLayout({
           {children}
         </div>
         <div className="flex min-h-0 min-w-0 w-full flex-col pt-10 lg:pt-0">
-          <div className="flex min-h-0 w-full flex-1 flex-col rounded-lg bg-white shadow-md lg:z-10 lg:max-w-full lg:self-stretch lg:shadow-lg">
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-1 pt-0 sm:px-0 lg:p-6">
-              <section>
-                <h2 className={usageHeadingClass}>
-                  Usage
-                </h2>
-                <UsageShell>
-                  {demo}
-                </UsageShell>
-              </section>
-            </div>
-          </div>
+          <ExampleDemoBox demo={demo} />
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { RxDjangoLogo } from './RxDjangoLogo';
 import { pages, type Page } from './examples/pages.generated';
+import { ExampleDemoBox } from './components/ExampleLayout';
 
 // CRA sets PUBLIC_URL from package.json "homepage" at build time;
 // it is "" in dev and e.g. "/react" in production.
@@ -17,9 +18,12 @@ function withBasename(path: string): string {
   return `${BASENAME}${path}`;
 }
 
-function pageForPath(pathname: string): Page | null {
-  const segment = stripBasename(pathname).replace(/^\/+|\/+$/g, '');
-  return pages.find(([app]) => app === segment) ?? null;
+function routeForPath(pathname: string): { page: Page | null; demoOnly: boolean } {
+  const segments = stripBasename(pathname).replace(/^\/+|\/+$/g, '').split('/');
+  const app = segments[0] ?? '';
+  const demoOnly = segments[1] === 'demo';
+  const page = pages.find(([slug]) => slug === app) ?? null;
+  return { page, demoOnly: demoOnly && page != null };
 }
 
 function navLinkClass(active: boolean): string {
@@ -32,13 +36,13 @@ function navLinkClass(active: boolean): string {
 }
 
 export function Main() {
-  const [active, setActive] = useState<Page | null>(() =>
-    pageForPath(window.location.pathname),
+  const [route, setRoute] = useState<{ page: Page | null; demoOnly: boolean }>(
+    () => routeForPath(window.location.pathname),
   );
 
   useEffect(() => {
     const onPopState = () => {
-      setActive(pageForPath(window.location.pathname));
+      setRoute(routeForPath(window.location.pathname));
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -50,11 +54,21 @@ export function Main() {
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
-    setActive(page);
+    setRoute({ page, demoOnly: false });
   };
 
+  const active = route.page;
   const activeApp = active?.[0] ?? null;
   const ActiveComponent = active?.[2] ?? null;
+  const ActiveDemo = active?.[3] ?? null;
+
+  if (route.demoOnly && ActiveDemo != null) {
+    return (
+      <div className="flex h-dvh min-h-0 flex-col bg-primary-100/50 p-6 font-sans text-ink">
+        <ExampleDemoBox demo={<ActiveDemo />} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-dvh min-h-0 overflow-hidden bg-surface font-sans text-ink">

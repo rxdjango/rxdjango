@@ -2,17 +2,22 @@
 // Source: docs/examples/index.md (toctree order)
 import type { ReactElement } from 'react';
 import { CounterPage } from './counter/CounterPage';
+import { CounterDemo } from './counter/demo';
 import { CarouselPage } from './carousel/CarouselPage';
+import { CarouselDemo } from './carousel/demo';
 import { MemoPage } from './memo/MemoPage';
+import { MemoDemo } from './memo/demo';
 import { AuthorizationPage } from './authorization/AuthorizationPage';
+import { AuthorizationDemo } from './authorization/demo';
 import { AuthorizationMetaPage } from './authorization_meta/AuthorizationMetaPage';
+import { AuthorizationMetaDemo } from './authorization_meta/demo';
 
-export type Page = [app: string, title: string, Component: () => ReactElement];
+export type Page = [app: string, title: string, Component: () => ReactElement, Demo: () => ReactElement];
 
 export const pages: Page[] = [
-  ['counter', 'Counter', CounterPage],
-  ['carousel', 'Carousel', CarouselPage],
-  ['memo', 'Memo', MemoPage],
-  ['authorization', 'Authorization', AuthorizationPage],
-  ['authorization_meta', 'Authorization Meta', AuthorizationMetaPage],
+  ['counter', 'Counter', CounterPage, CounterDemo],
+  ['carousel', 'Carousel', CarouselPage, CarouselDemo],
+  ['memo', 'Memo', MemoPage, MemoDemo],
+  ['authorization', 'Authorization', AuthorizationPage, AuthorizationDemo],
+  ['authorization_meta', 'Authorization Meta', AuthorizationMetaPage, AuthorizationMetaDemo],
 ];

@@ -227,16 +227,19 @@ def render_registry_ts(pages: list[Page]) -> str:
         lines.append(
             f"import {{ {pascal_name}Page }} from './{page.slug}/{pascal_name}Page';"
         )
+        lines.append(
+            f"import {{ {pascal_name}Demo }} from './{page.slug}/demo';"
+        )
     lines.append("")
     lines.append(
-        "export type Page = [app: string, title: string, Component: () => ReactElement];"
+        "export type Page = [app: string, title: string, Component: () => ReactElement, Demo: () => ReactElement];"
     )
     lines.append("")
     lines.append("export const pages: Page[] = [")
     for page in pages:
         pascal_name = pascal(page.slug)
         lines.append(
-            f"  ['{page.slug}', '{page.title}', {pascal_name}Page],"
+            f"  ['{page.slug}', '{page.title}', {pascal_name}Page, {pascal_name}Demo],"
         )
     lines.append("];")
     lines.append("")
