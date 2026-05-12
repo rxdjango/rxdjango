@@ -258,7 +258,7 @@ export function Main() {
                     className="space-y-2 py-8"
                   >
                     <h2 id={`${view}-backend`} className={sectionHeadingClass}>
-                      Backend (Django)
+                      Backend
                     </h2>
                     {sourceError != null ? (
                       <p className="mt-2 text-sm leading-relaxed text-primary-700">
