@@ -1,3 +1,5 @@
+import os
+
 project = 'RxDjango'
 author = 'RxDjango contributors'
 
@@ -22,7 +24,7 @@ html_domain_indices = False
 
 # Base URL where the live demo React app is served. Each example is loaded
 # in an iframe at "<demo_base_url>/react/<example_name>/demo".
-demo_base_url = 'http://localhost:3000'
+demo_base_url = os.environ.get('DEMO_URL', '')
 
 html_context = {
     'demo_base_url': demo_base_url,
