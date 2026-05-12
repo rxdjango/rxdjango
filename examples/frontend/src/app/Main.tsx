@@ -9,14 +9,13 @@ import { UsageShell } from './UsageShell';
 
 type View = 'index' | 'counter' | 'carousel' | 'memo' | 'authorization' | 'authorization_meta';
 
-/** Extend keys when new @rxdjango/* client snippets ship */
-type FrontendSnippetKey = 'react' | 'vue';
+const API_BASE = '';
 
 interface ExampleMeta {
   title: string;
   description: string;
-  codeBackend: string;
-  codeFrontend: Record<FrontendSnippetKey, string | undefined>;
+  backendFile: string;
+  frontendFile: string;
   render: () => ReactNode;
 }
 
@@ -66,255 +65,95 @@ const examples: Record<Exclude<View, 'index'>, ExampleMeta> = {
     title: 'Counter',
     description:
       'A single reactive integer on the channel. Subscribe from React with useChannel, then call increment to run the server-side action and see the value update everywhere it is displayed.',
-    codeBackend: [
-      '# counter/channels.py',
-      '',
-      'from rxdjango import ContextChannel, rx, action',
-      '',
-      'class CounterChannel(ContextChannel):',
-      '',
-      '    counter = rx[int](0)',
-      '',
-      '    @action',
-      '    async def increment(self):',
-      '        self.counter += 1',
-    ].join('\n'),
-    codeFrontend: {
-      react: [
-        "import { useChannel } from '@rxdjango/react';",
-        "import { CounterChannel } from '../../rx/counter/counter.channels';",
-        '',
-        'export function CounterDemo() {',
-        '  const channel = useChannel(CounterChannel);',
-        '',
-        '  return (',
-        '    <div>',
-        '      <p>Value: {channel.counter}</p>',
-        '      <button type="button" onClick={channel.increment}>',
-        '        Increment',
-        '      </button>',
-        '    </div>',
-        '  );',
-        '}',
-      ].join('\n'),
-      vue: undefined,
-    },
+    backendFile: 'channels.py',
+    frontendFile: 'CounterPage.tsx',
     render: () => <CounterPage />,
   },
   carousel: {
     title: 'Carousel',
     description:
       'Three related reactive fields—selected index, fruit name, and first letter—updated together when you call rotate. Shows how the backend can keep a small graph of state consistent in one action.',
-    codeBackend: [
-      '# carousel/channels.py',
-      '',
-      'from rxdjango import ContextChannel, rx, action',
-      '',
-      'class CarouselChannel(ContextChannel):',
-      '',
-      "    FRUITS = ['banana', 'apple', 'orange']",
-      '',
-      '    selected = rx[int](0)',
-      '    fruit = rx[str](FRUITS[selected])',
-      '    first_letter = rx[str](fruit[0])',
-      '',
-      '    @action',
-      '    async def rotate(self):',
-      '        self.selected = (self.selected + 1) % len(self.FRUITS)',
-      '        self.fruit = self.FRUITS[self.selected]',
-      '        self.first_letter = self.fruit[0]',
-    ].join('\n'),
-    codeFrontend: {
-      react: [
-        "import { useChannel } from '@rxdjango/react';",
-        "import { CarouselChannel } from '../../rx/carousel/carousel.channels';",
-        '',
-        'export function CarouselDemo() {',
-        '  const channel = useChannel(CarouselChannel);',
-        '',
-        '  return (',
-        '    <div>',
-        '      <p>Selected: {channel.selected}</p>',
-        '      <p>Fruit: {channel.fruit}</p>',
-        '      <p>First letter: {channel.first_letter}</p>',
-        '      <button type="button" onClick={channel.rotate}>',
-        '        Next',
-        '      </button>',
-        '    </div>',
-        '  );',
-        '}',
-      ].join('\n'),
-      vue: undefined,
-    },
+    backendFile: 'channels.py',
+    frontendFile: 'CarouselPage.tsx',
     render: () => <CarouselPage />,
   },
   memo: {
     title: 'Memo',
     description:
       'Same interaction as Carousel, but fruit and first letter are derived with @memo from selected. Useful when you want stable derived values and explicit dependency tracking on the channel.',
-    codeBackend: [
-      '# memo/channels.py',
-      '',
-      'from rxdjango import ContextChannel, rx, action, memo',
-      '',
-      'class CarouselMemoChannel(ContextChannel):',
-      '',
-      "    FRUITS = ['banana', 'apple', 'orange']",
-      '',
-      '    selected = rx[int](0)',
-      '',
-      '    @action',
-      '    async def rotate(self):',
-      '        self.selected = (self.selected + 1) % len(self.FRUITS)',
-      '',
-      "    @memo('selected')",
-      '    def fruit(self):',
-      '        return self.FRUITS[self.selected]',
-      '',
-      "    @memo('fruit')",
-      '    def first_letter(self):',
-      '        return self.fruit[0]',
-    ].join('\n'),
-    codeFrontend: {
-      react: [
-        "import { useChannel } from '@rxdjango/react';",
-        "import { CarouselMemoChannel } from '../../rx/memo/memo.channels';",
-        '',
-        'export function MemoDemo() {',
-        '  const channel = useChannel(CarouselMemoChannel);',
-        '',
-        '  return (',
-        '    <div>',
-        '      <p>Fruit: {channel.fruit}</p>',
-        '      <button type="button" onClick={channel.rotate}>',
-        '        Next',
-        '      </button>',
-        '    </div>',
-        '  );',
-        '}',
-      ].join('\n'),
-      vue: undefined,
-    },
+    backendFile: 'channels.py',
+    frontendFile: 'MemoPage.tsx',
     render: () => <MemoPage />,
   },
   authorization: {
     title: 'Authorization',
     description:
       'increment is declared with requires authorized; authorize checks the password and sets a flag. Until you authorize successfully, the increment action will not run—per-action authorization on the channel.',
-    codeBackend: [
-      '# authorization/channels.py',
-      '',
-      'from rxdjango import ContextChannel, rx, action',
-      '',
-      'class AuthorizationChannel(ContextChannel):',
-      '',
-      '    authorized: bool = False',
-      '    counter = rx[int](0)',
-      '',
-      '    @action',
-      '    async def authorize(self, password: str):',
-      "        if password == 'password':",
-      '            self.authorized = True',
-      '            return True',
-      '        return False',
-      '',
-      "    @action(requires='authorized')",
-      '    async def increment(self):',
-      '        self.counter += 1',
-    ].join('\n'),
-    codeFrontend: {
-      react: [
-        "import { useState } from 'react';",
-        "import { useChannel } from '@rxdjango/react';",
-        "import { AuthorizationChannel } from '../../rx/authorization/authorization.channels';",
-        '',
-        'export function AuthorizationDemo() {',
-        '  const channel = useChannel(AuthorizationChannel);',
-        '  const [password, setPassword] = useState(\'password\');',
-        '',
-        '  return (',
-        '    <div>',
-        '      <input',
-        '        type="text"',
-        '        value={password}',
-        '        onChange={(e) => setPassword(e.target.value)}',
-        '      />',
-        '      <button type="button" onClick={() => channel.authorize(password)}>',
-        '        Authorize',
-        '      </button>',
-        '      <p>Value: {channel.counter}</p>',
-        '      <button type="button" onClick={channel.increment}>',
-        '        Increment',
-        '      </button>',
-        '    </div>',
-        '  );',
-        '}',
-      ].join('\n'),
-      vue: undefined,
-    },
+    backendFile: 'channels.py',
+    frontendFile: 'AuthorizationPage.tsx',
     render: () => <AuthorizationPage />,
   },
   authorization_meta: {
     title: 'Authorization Meta',
     description:
       'Uses Meta.action_requires so every action defaults to requiring authorization, while authorize stays anonymous. Same password flow as Authorization, but the rule is expressed once on the channel class.',
-    codeBackend: [
-      '# authorization_meta/channels.py',
-      '',
-      'from rxdjango import ContextChannel, rx, action',
-      '',
-      'class AuthorizationMetaChannel(ContextChannel):',
-      '',
-      '    authorized: bool = False',
-      '    counter = rx[int](0)',
-      '',
-      '    class Meta:',
-      "        action_requires = 'authorized'",
-      '',
-      '    @action(anonymous=True)',
-      '    async def authorize(self, password: str):',
-      "        if password == 'password':",
-      '            self.authorized = True',
-      '            return True',
-      '        return False',
-      '',
-      '    @action',
-      '    async def increment(self):',
-      '        self.counter += 1',
-    ].join('\n'),
-    codeFrontend: {
-      react: [
-        "import { useState } from 'react';",
-        "import { useChannel } from '@rxdjango/react';",
-        "import { AuthorizationMetaChannel } from '../../rx/authorization_meta/authorization_meta.channels';",
-        '',
-        'export function AuthorizationMetaDemo() {',
-        '  const channel = useChannel(AuthorizationMetaChannel);',
-        '  const [password, setPassword] = useState(\'password\');',
-        '',
-        '  return (',
-        '    <div>',
-        '      <input',
-        '        type="text"',
-        '        value={password}',
-        '        onChange={(e) => setPassword(e.target.value)}',
-        '      />',
-        '      <button type="button" onClick={() => channel.authorize(password)}>',
-        '        Authorize',
-        '      </button>',
-        '      <p>Value: {channel.counter}</p>',
-        '      <button type="button" onClick={channel.increment}>',
-        '        Increment',
-        '      </button>',
-        '    </div>',
-        '  );',
-        '}',
-      ].join('\n'),
-      vue: undefined,
-    },
+    backendFile: 'channels.py',
+    frontendFile: 'AuthorizationMetaPage.tsx',
     render: () => <AuthorizationMetaPage />,
   },
 };
+
+function useExampleSource(
+  app: Exclude<View, 'index'> | null,
+  backendFile: string | null,
+  frontendFile: string | null,
+) {
+  const [backend, setBackend] = useState<string | null>(null);
+  const [frontend, setFrontend] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (app == null || backendFile == null || frontendFile == null) {
+      setBackend(null);
+      setFrontend(null);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setBackend(null);
+    setFrontend(null);
+    setError(null);
+
+    const load = async (path: string) => {
+      const res = await fetch(`${API_BASE}/src/${app}/${path}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load ${path}: ${res.status}`);
+      }
+      return res.text();
+    };
+
+    Promise.all([load(backendFile), load(frontendFile)]).then(
+      ([backendSrc, frontendSrc]) => {
+        if (cancelled) return;
+        setBackend(backendSrc);
+        setFrontend(frontendSrc);
+      },
+      (err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : String(err));
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [app, backendFile, frontendFile]);
+
+  return { backend, frontend, error };
+}
 
 function pathToView(pathname: string): View {
   const segment = pathname.replace(/^\/+|\/+$/g, '');
@@ -364,9 +203,14 @@ export function Main() {
     setView(next);
   };
 
-  const activeExample = view !== 'index' ? examples[view] : null;
-  const frontendSnippet =
-    activeExample != null ? activeExample.codeFrontend.react : undefined;
+  const activeApp = view !== 'index' ? view : null;
+  const activeExample = activeApp != null ? examples[activeApp] : null;
+  const { backend: backendSnippet, frontend: frontendSnippet, error: sourceError } =
+    useExampleSource(
+      activeApp,
+      activeExample?.backendFile ?? null,
+      activeExample?.frontendFile ?? null,
+    );
 
   return (
     <div className="flex h-dvh min-h-0 overflow-hidden bg-surface font-sans text-ink">
@@ -449,7 +293,17 @@ export function Main() {
                     <h2 id={`${view}-backend`} className={sectionHeadingClass}>
                       Backend (Django)
                     </h2>
-                    <SourceCodeBlock code={examples[view].codeBackend} />
+                    {sourceError != null ? (
+                      <p className="mt-2 text-sm leading-relaxed text-primary-700">
+                        Failed to load source: {sourceError}
+                      </p>
+                    ) : backendSnippet != null ? (
+                      <SourceCodeBlock code={backendSnippet} />
+                    ) : (
+                      <p className="mt-2 text-sm leading-relaxed text-primary-700">
+                        Loading…
+                      </p>
+                    )}
                   </section>
                   <section
                     aria-labelledby={`${view}-frontend`}
@@ -471,11 +325,15 @@ export function Main() {
                         </span>
                       </div>
                     </div>
-                    {frontendSnippet != null && frontendSnippet !== '' ? (
+                    {sourceError != null ? (
+                      <p className="mt-2 text-sm leading-relaxed text-primary-700">
+                        Failed to load source: {sourceError}
+                      </p>
+                    ) : frontendSnippet != null ? (
                       <SourceCodeBlock code={frontendSnippet} />
                     ) : (
                       <p className="mt-2 text-sm leading-relaxed text-primary-700">
-                        Example for this client package is not available yet.
+                        Loading…
                       </p>
                     )}
                   </section>

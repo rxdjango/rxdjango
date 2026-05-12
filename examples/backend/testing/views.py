@@ -11,7 +11,9 @@ FILENAME_RE = re.compile(r'^[a-zA-Z0-9_.-]+$')
 BACKEND_FILES = {'channels.py', 'models.py'}
 
 BACKEND_ROOT = Path(settings.BASE_DIR)
-FRONTEND_ROOT = Path(settings.BASE_DIR).parent / 'frontend' / 'src' / 'app' / 'rx'
+FRONTEND_APP_ROOT = Path(settings.BASE_DIR).parent / 'frontend' / 'src' / 'app'
+FRONTEND_RX_ROOT = FRONTEND_APP_ROOT / 'rx'
+FRONTEND_EXAMPLES_ROOT = FRONTEND_APP_ROOT / 'examples'
 
 
 def source(request, app, filename):
@@ -27,8 +29,11 @@ def source(request, app, filename):
     if filename in BACKEND_FILES:
         path = BACKEND_ROOT / app / filename
         content_type = 'text/x-python'
-    elif filename == f'{app}.channels.ts':
-        path = FRONTEND_ROOT / app / filename
+    elif filename.endswith('.channels.ts'):
+        path = FRONTEND_RX_ROOT / app / filename
+        content_type = 'application/typescript'
+    elif filename.endswith('.tsx'):
+        path = FRONTEND_EXAMPLES_ROOT / app / filename
         content_type = 'application/typescript'
     else:
         raise Http404()
