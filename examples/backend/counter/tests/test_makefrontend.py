@@ -33,6 +33,7 @@ class MakeFrontendCounterTests(FrontendTestCase):
         member = find_member(cls, 'increment')
         self.assertIsNotNone(member, '`increment` action not found on CounterChannel')
         self.assertEqual(member['kind'], 'method')
+        self.assertTrue(member['async'], 'action must be emitted as async')
         self.assertEqual(member['params'], [])
 
     def test_endpoint_matches_routing_pattern(self):

@@ -34,14 +34,29 @@ function describeClass(node, source) {
   const members = [];
   for (const member of node.members) {
     if (ts.isPropertyDeclaration(member)) {
-      members.push({
-        kind: 'property',
-        name: member.name.getText(source),
-        type: describeType(member.type, source),
-        initializer: describeInitializer(member.initializer, source),
-        optional: !!member.questionToken,
-        readonly: !!(member.modifiers || []).find(m => m.kind === ts.SyntaxKind.ReadonlyKeyword),
-      });
+      const init = member.initializer;
+      if (init && (ts.isArrowFunction(init) || ts.isFunctionExpression(init))) {
+        const isAsync = !!(init.modifiers || []).find(m => m.kind === ts.SyntaxKind.AsyncKeyword);
+        members.push({
+          kind: 'method',
+          name: member.name.getText(source),
+          params: init.parameters.map(p => ({
+            name: p.name.getText(source),
+            type: describeType(p.type, source),
+          })),
+          returnType: describeType(init.type, source),
+          async: isAsync,
+        });
+      } else {
+        members.push({
+          kind: 'property',
+          name: member.name.getText(source),
+          type: describeType(member.type, source),
+          initializer: describeInitializer(member.initializer, source),
+          optional: !!member.questionToken,
+          readonly: !!(member.modifiers || []).find(m => m.kind === ts.SyntaxKind.ReadonlyKeyword),
+        });
+      }
     } else if (ts.isMethodDeclaration(member)) {
       members.push({
         kind: 'method',
