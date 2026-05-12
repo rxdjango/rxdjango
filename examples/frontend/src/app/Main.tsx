@@ -1,20 +1,6 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RxDjangoLogo } from './RxDjangoLogo';
-import { CounterPage } from './examples/counter/CounterPage';
-import { CarouselPage } from './examples/carousel/CarouselPage';
-import { MemoPage } from './examples/memo/MemoPage';
-import { AuthorizationPage } from './examples/authorization/AuthorizationPage';
-import { AuthorizationMetaPage } from './examples/authorization_meta/AuthorizationMetaPage';
-
-type Page = [app: string, title: string, Component: () => ReactElement];
-
-const pages: Page[] = [
-  ['counter', 'Counter', CounterPage],
-  ['carousel', 'Carousel', CarouselPage],
-  ['memo', 'Memo', MemoPage],
-  ['authorization', 'Authorization', AuthorizationPage],
-  ['authorization_meta', 'Authorization Meta', AuthorizationMetaPage],
-];
+import { pages, type Page } from './examples/pages.generated';
 
 function pageForPath(pathname: string): Page | null {
   const segment = pathname.replace(/^\/+|\/+$/g, '');
