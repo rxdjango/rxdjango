@@ -1,4 +1,4 @@
-# RxDjango demo
+# Examples
 
 A collection of small examples that show how RxDjango keeps a React UI
 in sync with a Django backend through reactive channels. Pick an

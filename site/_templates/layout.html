@@ -25,17 +25,16 @@
             </text>
           </svg>
         </a>
-        <span class="examples-label">Examples</span>
       </div>
-      <nav aria-label="Examples">
+      <nav aria-label="Documentation">
         <a
           href="{{ pathto(master_doc) }}"
           class="nav-link{% if pagename == master_doc %} active{% endif %}"
         >
-          Overview
+          Home
         </a>
         <div class="toctree-wrapper">
-          {{ toctree(maxdepth=1, includehidden=true, titles_only=true, collapse=false) }}
+          {{ toctree(maxdepth=2, includehidden=true, titles_only=true, collapse=false) }}
         </div>
       </nav>
     </aside>
@@ -44,7 +43,7 @@
         <div class="overview">
           {{ body }}
         </div>
-      {% else %}
+      {% elif rxdemo_app %}
         <div class="example-page">
           <h1 class="page-title">{{ title|striptags|e }}</h1>
           <div class="example-grid">
@@ -53,11 +52,15 @@
             </div>
             <div class="demo-col">
               <iframe
-                src="{{ demo_base_url }}/react/{{ pagename }}/demo"
+                src="{{ demo_base_url }}/react/{{ rxdemo_app }}/demo"
                 title="{{ title|striptags|e }} demo"
               ></iframe>
             </div>
           </div>
+        </div>
+      {% else %}
+        <div class="overview">
+          {{ body }}
         </div>
       {% endif %}
     </main>

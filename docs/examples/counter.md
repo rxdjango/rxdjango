@@ -1,5 +1,8 @@
 # Counter
 
+```{rxdemo} counter
+```
+
 A single reactive integer on the channel. Subscribe from React with
 `useChannel`, then call `increment` to run the server-side action and
 see the value update everywhere it is displayed.

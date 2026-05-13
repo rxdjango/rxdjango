@@ -20,15 +20,15 @@ export function AuthorizationPage() {
           increment is declared with requires authorized; authorize checks the password and sets a flag. Until you authorize successfully, the increment action will not run—per-action authorization on the channel.
         </ExampleDescription>
       </ExampleSection>
-      <ExampleSection ariaLabelledBy="authorization-backend">
-        <ExampleSectionHeading id="authorization-backend">
+      <ExampleSection ariaLabelledBy="examples-authorization-backend">
+        <ExampleSectionHeading id="examples-authorization-backend">
           Backend
         </ExampleSectionHeading>
         <SourceFile path="authorization/channels.py" />
       </ExampleSection>
-      <ExampleSection ariaLabelledBy="authorization-frontend" position="last">
+      <ExampleSection ariaLabelledBy="examples-authorization-frontend" position="last">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <ExampleSectionHeading id="authorization-frontend">
+          <ExampleSectionHeading id="examples-authorization-frontend">
             Frontend
           </ExampleSectionHeading>
           <ExampleClientBadge />

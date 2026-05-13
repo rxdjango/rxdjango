@@ -1,5 +1,8 @@
 # Authorization Meta
 
+```{rxdemo} authorization_meta
+```
+
 Uses `Meta.action_requires` so every action defaults to requiring
 authorization, while `authorize` stays anonymous. Same password flow
 as Authorization, but the rule is expressed once on the channel class.

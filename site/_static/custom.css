@@ -115,10 +115,19 @@ a { color: inherit; }
   border-left-color: var(--primary-500);
 }
 
-.toctree-wrapper ul {
+.sidebar .toctree-wrapper ul {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.sidebar .toctree-wrapper ul ul {
+  margin-left: 1rem;
+}
+
+.sidebar .toctree-wrapper li.current > a {
+  background: rgba(225, 235, 234, 0.5);
+  border-left-color: var(--primary-500);
 }
 
 /* Main content */

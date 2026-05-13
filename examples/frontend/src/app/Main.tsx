@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { RxDjangoLogo } from './RxDjangoLogo';
-import { pages, type Page } from './examples/pages.generated';
+import { pages, type Page } from './pages.generated';
 
-// CRA sets PUBLIC_URL from package.json "homepage" at build time;
-// it is "" in dev and e.g. "/react" in production.
 const BASENAME = (process.env.PUBLIC_URL || '').replace(/\/+$/, '');
 
 function stripBasename(pathname: string): string {
@@ -18,18 +16,38 @@ function withBasename(path: string): string {
 }
 
 function routeForPath(pathname: string): { page: Page | null; demoOnly: boolean } {
-  const segments = stripBasename(pathname).replace(/^\/+|\/+$/g, '').split('/');
-  const app = segments[0] ?? '';
-  const demoOnly = segments[1] === 'demo';
-  const page = pages.find(([slug]) => slug === app) ?? null;
+  const stripped = stripBasename(pathname).replace(/^\/+|\/+$/g, '');
+  if (stripped === '') {
+    return { page: null, demoOnly: false };
+  }
+  const segments = stripped.split('/');
+  const last = segments[segments.length - 1];
+  const demoOnly = last === 'demo';
+  const slug = demoOnly ? segments.slice(0, -1).join('/') : stripped;
+  const page = pages.find((p) => p.slug === slug) ?? null;
   return { page, demoOnly: demoOnly && page != null };
 }
 
-function navLinkClass(active: boolean): string {
+function ancestorsOf(slug: string | null): Set<string> {
+  const result = new Set<string>();
+  if (!slug) {
+    return result;
+  }
+  const parts = slug.split('/');
+  for (let i = 1; i <= parts.length; i++) {
+    result.add(parts.slice(0, i).join('/'));
+  }
+  return result;
+}
+
+function navLinkClass(active: boolean, ancestor: boolean): string {
   const base =
     'block rounded-r-lg border-l-4 py-1.5 pl-3 pr-3 text-sm font-medium text-ink transition-colors';
   if (active) {
     return `${base} border-primary-500 bg-primary-200/50`;
+  }
+  if (ancestor) {
+    return `${base} border-primary-400 bg-primary-100/60`;
   }
   return `${base} border-transparent hover:border-primary-300 hover:bg-primary-100/80`;
 }
@@ -48,8 +66,7 @@ export function Main() {
   }, []);
 
   const navigate = (page: Page | null) => {
-    const path = withBasename(page == null ? '/' : `/${page[0]}`);
-
+    const path = withBasename(page == null ? '/' : `/${page.slug}`);
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
@@ -57,9 +74,9 @@ export function Main() {
   };
 
   const active = route.page;
-  const activeApp = active?.[0] ?? null;
-  const ActiveComponent = active?.[2] ?? null;
-  const ActiveDemo = active?.[3] ?? null;
+  const ActiveComponent = active?.Component ?? null;
+  const ActiveDemo = active?.Demo ?? null;
+  const activeSlugs = ancestorsOf(active?.slug ?? null);
 
   if (route.demoOnly && ActiveDemo != null) {
     return (
@@ -81,35 +98,34 @@ export function Main() {
             >
               <RxDjangoLogo className="h-8 w-auto max-w-full" />
             </button>
-            <p className="shrink-0 text-xs font-medium uppercase tracking-wide text-primary-700">
-              Examples
-            </p>
           </div>
         </div>
-        <nav className="flex flex-1 flex-col gap-0 p-2" aria-label="Examples">
+        <nav className="flex flex-1 flex-col gap-0 p-2" aria-label="Documentation">
           <a
             href={withBasename('/')}
-            className={navLinkClass(active == null)}
+            className={navLinkClass(active == null, false)}
             onClick={(event) => {
               event.preventDefault();
               navigate(null);
             }}
           >
-            Overview
+            Home
           </a>
           {pages.map((page) => {
-            const [app, title] = page;
+            const isActive = active?.slug === page.slug;
+            const isAncestor = !isActive && activeSlugs.has(page.slug);
             return (
               <a
-                key={app}
-                href={withBasename(`/${app}`)}
-                className={navLinkClass(activeApp === app)}
+                key={page.slug}
+                href={withBasename(`/${page.slug}`)}
+                className={navLinkClass(isActive, isAncestor)}
+                style={{ paddingLeft: `${0.75 + page.depth * 1}rem` }}
                 onClick={(event) => {
                   event.preventDefault();
                   navigate(page);
                 }}
               >
-                {title}
+                {page.title}
               </a>
             );
           })}
@@ -118,14 +134,14 @@ export function Main() {
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-primary-100/50">
         {ActiveComponent == null ? (
           <div className="flex-1 overflow-y-auto overscroll-y-contain">
-            <div className="mx-auto w-full max-w-8xl px-6 py-10">
+            <div className="mx-auto w-full max-w-3xl px-6 py-10">
               <h1 className="text-2xl font-semibold tracking-tight text-ink">
-                RxDjango demo
+                RxDjango
               </h1>
               <p className="mt-4 max-w-prose text-base leading-relaxed text-primary-800">
-                A collection of small examples that show how RxDjango keeps a
-                React UI in sync with a Django backend through reactive
-                channels. Pick an example from the sidebar to see it in action.
+                A reactive layer for Django that keeps a TypeScript UI in
+                sync with the server through typed channels. Pick a page
+                from the sidebar to start.
               </p>
             </div>
           </div>

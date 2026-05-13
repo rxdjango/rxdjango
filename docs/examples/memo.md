@@ -1,5 +1,8 @@
 # Memo
 
+```{rxdemo} memo
+```
+
 Same interaction as Carousel, but fruit and first letter are derived
 with `@memo` from `selected`. Useful when you want stable derived
 values and explicit dependency tracking on the channel.

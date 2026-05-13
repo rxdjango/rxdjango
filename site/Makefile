@@ -1,5 +1,5 @@
 SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = ../docs/examples
+SOURCEDIR     = ../docs
 BUILDDIR      = _build
 CONFDIR       = .
 

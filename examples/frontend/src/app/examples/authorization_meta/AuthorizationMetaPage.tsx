@@ -20,15 +20,15 @@ export function AuthorizationMetaPage() {
           Uses Meta.action_requires so every action defaults to requiring authorization, while authorize stays anonymous. Same password flow as Authorization, but the rule is expressed once on the channel class.
         </ExampleDescription>
       </ExampleSection>
-      <ExampleSection ariaLabelledBy="authorization-meta-backend">
-        <ExampleSectionHeading id="authorization-meta-backend">
+      <ExampleSection ariaLabelledBy="examples-authorization-meta-backend">
+        <ExampleSectionHeading id="examples-authorization-meta-backend">
           Backend
         </ExampleSectionHeading>
         <SourceFile path="authorization_meta/channels.py" />
       </ExampleSection>
-      <ExampleSection ariaLabelledBy="authorization-meta-frontend" position="last">
+      <ExampleSection ariaLabelledBy="examples-authorization-meta-frontend" position="last">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <ExampleSectionHeading id="authorization-meta-frontend">
+          <ExampleSectionHeading id="examples-authorization-meta-frontend">
             Frontend
           </ExampleSectionHeading>
           <ExampleClientBadge />

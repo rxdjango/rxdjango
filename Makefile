@@ -67,7 +67,7 @@ site: docs examples
 dev: extract react-package
 	@trap 'kill 0' INT TERM EXIT; \
 	$(UVRUN) --with sphinx-autobuild sphinx-autobuild \
-		-c $(SITE) docs/examples $(SITE_BUILD) --port 8000 & \
+		-c $(SITE) docs $(SITE_BUILD) --port 8000 & \
 	$(NPM) --prefix $(FRONTEND) start & \
 	wait
 

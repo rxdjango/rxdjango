@@ -20,15 +20,15 @@ export function CounterPage() {
           A single reactive integer on the channel. Subscribe from React with useChannel, then call increment to run the server-side action and see the value update everywhere it is displayed.
         </ExampleDescription>
       </ExampleSection>
-      <ExampleSection ariaLabelledBy="counter-backend">
-        <ExampleSectionHeading id="counter-backend">
+      <ExampleSection ariaLabelledBy="examples-counter-backend">
+        <ExampleSectionHeading id="examples-counter-backend">
           Backend
         </ExampleSectionHeading>
         <SourceFile path="counter/channels.py" />
       </ExampleSection>
-      <ExampleSection ariaLabelledBy="counter-frontend" position="last">
+      <ExampleSection ariaLabelledBy="examples-counter-frontend" position="last">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <ExampleSectionHeading id="counter-frontend">
+          <ExampleSectionHeading id="examples-counter-frontend">
             Frontend
           </ExampleSectionHeading>
           <ExampleClientBadge />
