@@ -1,8 +1,8 @@
 # Examples
 
-A collection of small examples that show how RxDjango keeps a React UI
-in sync with a Django backend through reactive channels. Pick an
-example to see it in action.
+These examples show how RxDjango works.
+Each example is a Django app. You can see the source
+code and interact with the widgets in each example.
 
 ```{toctree}
 :maxdepth: 1

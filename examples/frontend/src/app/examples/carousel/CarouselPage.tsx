@@ -14,10 +14,10 @@ import { SourceFile } from '../../components/SourceFile';
 
 export function CarouselPage() {
   return (
-    <ExampleLayout title="Carousel" demo={<CarouselDemo />}>
+    <ExampleLayout title="rx fields" demo={<CarouselDemo />}>
       <ExampleSection position="first">
         <ExampleDescription>
-          Three related reactive fields—selected index, fruit name, and first letter—updated together when you call rotate. Shows how the backend can keep a small graph of state consistent in one action.
+          This example shows how an rx field can be used as a bare str or int. They are indeed extensions of int and str. **NOTE**: bool type cannot be extended. rx[bool] fields cannot be used with is comparison.
         </ExampleDescription>
       </ExampleSection>
       <ExampleSection ariaLabelledBy="examples-carousel-backend">

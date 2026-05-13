@@ -14,10 +14,10 @@ import { SourceFile } from '../../components/SourceFile';
 
 export function CounterPage() {
   return (
-    <ExampleLayout title="Counter" demo={<CounterDemo />}>
+    <ExampleLayout title="Basic channel" demo={<CounterDemo />}>
       <ExampleSection position="first">
         <ExampleDescription>
-          A single reactive integer on the channel. Subscribe from React with useChannel, then call increment to run the server-side action and see the value update everywhere it is displayed.
+          This is a simple counter, that demonstrate how state is forwarded to frontend, and how frontend can interact with backend channel. The widget at the right (or below depending on your screen) shows the same code in action.
         </ExampleDescription>
       </ExampleSection>
       <ExampleSection ariaLabelledBy="examples-counter-backend">

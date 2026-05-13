@@ -1,9 +1,10 @@
 # Project status
 
-RxDjango is being rebuilt from the v0.0.x prototype that lives at
-[rxdjango/rxdjango-0](https://github.com/rxdjango/rxdjango). The
-current focus is the semantics — serializers, channels, and the
-Python↔TypeScript boundary — rather than transport plumbing.
+We have built the main project semantics and core functionality.
+There's still a roadmap ahead for v0.1.
 
-Track ongoing work via the ADRs under `docs/adr/` and the issues on
-the GitHub repository.
+Now that the site is functional, we have the next big engineering
+effort: the model architecture.
+
+Give us a star at [Github](https://github.com/rxdjango/rxdjango) to
+keep updated with the development!

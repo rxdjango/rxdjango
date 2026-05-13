@@ -1,11 +1,15 @@
-# Memo
+# @memo
 
 ```{rxdemo} memo
 ```
 
-Same interaction as Carousel, but fruit and first letter are derived
-with `@memo` from `selected`. Useful when you want stable derived
-values and explicit dependency tracking on the channel.
+This provides the exact same functionality as [rx field](carousel.md) example,
+now using `@memo` decorator.
+
+@memo receives a list of `rx` field names that are checked on any update to see
+if the value needs to be recalculated.
+
+Inspired by React's useMemo()
 
 ## Backend
 

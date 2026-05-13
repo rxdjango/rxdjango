@@ -1,12 +1,6 @@
 # Quickstart
 
-Install the Python package and the React client:
+This section will contain a guide on how to setup RxDjango.
 
-```bash
-pip install rxdjango
-npm install @rxdjango/react
-```
-
-Define a channel on the backend, expose it over the ASGI router, and
-subscribe from React with `useChannel`. The [Examples](examples/index.md)
-section shows full working channels you can copy.
+For now, check the examples backend project in source code at
+[Github](https://github.com/rxdjango/rxdjango).

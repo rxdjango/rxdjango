@@ -1,11 +1,13 @@
-# Counter
+# Basic channel
 
 ```{rxdemo} counter
 ```
 
-A single reactive integer on the channel. Subscribe from React with
-`useChannel`, then call `increment` to run the server-side action and
-see the value update everywhere it is displayed.
+This is a simple counter, that demonstrate how state is forwarded to frontend,
+and how frontend can interact with backend channel.
+
+The widget at the right (or below depending on your screen) shows the same code
+in action.
 
 ## Backend
 
