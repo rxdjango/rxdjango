@@ -403,7 +403,7 @@ def render_doc_page_tsx(page: Page, all_pages: list[Page]) -> str:
             child_title = title_by_slug.get(child_slug, child_slug)
             lines.append("        <li>")
             lines.append(
-                f"          <a href=\"/{child_slug}\" className=\"text-primary-700 hover:underline\">"
+                f"          <a href={{`${{process.env.PUBLIC_URL || ''}}/{child_slug}`}} className=\"text-primary-700 hover:underline\">"
             )
             lines.append(f"            {child_title}")
             lines.append("          </a>")

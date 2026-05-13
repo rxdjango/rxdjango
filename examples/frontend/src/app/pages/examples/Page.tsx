@@ -14,27 +14,27 @@ export function ExamplesPage() {
       </p>
       <ul className="mt-6 flex flex-col gap-2">
         <li>
-          <a href="/examples/counter" className="text-primary-700 hover:underline">
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/counter`} className="text-primary-700 hover:underline">
             Counter
           </a>
         </li>
         <li>
-          <a href="/examples/carousel" className="text-primary-700 hover:underline">
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/carousel`} className="text-primary-700 hover:underline">
             Carousel
           </a>
         </li>
         <li>
-          <a href="/examples/memo" className="text-primary-700 hover:underline">
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/memo`} className="text-primary-700 hover:underline">
             Memo
           </a>
         </li>
         <li>
-          <a href="/examples/authorization" className="text-primary-700 hover:underline">
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/authorization`} className="text-primary-700 hover:underline">
             Authorization
           </a>
         </li>
         <li>
-          <a href="/examples/authorization_meta" className="text-primary-700 hover:underline">
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/authorization_meta`} className="text-primary-700 hover:underline">
             Authorization Meta
           </a>
         </li>
