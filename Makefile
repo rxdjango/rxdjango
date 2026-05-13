@@ -12,8 +12,10 @@ SHELL        := /bin/bash
 PYTHON       ?= python3
 NPM          ?= npm
 UVRUN        ?= uv run
+SPHINXBUILD  ?= $(UVRUN) sphinx-build
 
 FRONTEND      = examples/frontend
+REACT_PACKAGE = packages/react
 SITE          = site
 SITE_BUILD    = $(SITE)/_build/html
 FRONT_BUILD   = $(FRONTEND)/build
@@ -21,11 +23,12 @@ EXAMPLES_OUT  = $(SITE_BUILD)/react
 
 .DEFAULT_GOAL := help
 
-.PHONY: help extract docs examples site dev check clean
+.PHONY: help extract react-package docs examples site dev check clean
 
 help:
 	@echo "Targets:"
 	@echo "  make extract   Generate React example pages from docs/examples/"
+	@echo "  make react-package  Build @rxdjango/react -> $(REACT_PACKAGE)/dist"
 	@echo "  make docs      Build the Sphinx site (HTML) -> $(SITE_BUILD)"
 	@echo "  make examples  Build the React examples app -> $(FRONT_BUILD)"
 	@echo "  make site      Build docs + examples and stitch into $(SITE_BUILD)"
@@ -36,10 +39,16 @@ help:
 extract:
 	@$(PYTHON) tools/docgen/docgen.py
 
-docs: extract
-	@$(MAKE) -C $(SITE) html
+react-package:
+	@if [ ! -x "$(REACT_PACKAGE)/node_modules/.bin/tsup" ]; then \
+		$(NPM) --prefix $(REACT_PACKAGE) install; \
+	fi
+	@$(NPM) --prefix $(REACT_PACKAGE) run build
 
-examples: extract
+docs: extract
+	@$(MAKE) -C $(SITE) html SPHINXBUILD="$(SPHINXBUILD)"
+
+examples: extract react-package
 	@$(NPM) --prefix $(FRONTEND) run build
 
 site: docs examples
@@ -51,14 +60,14 @@ site: docs examples
 # Run docgen once, then sphinx-autobuild and the React dev server in parallel.
 # Edits to docs/examples/*.md currently require re-running `make extract`
 # (docgen --watch is not implemented yet).
-dev: extract
+dev: extract react-package
 	@trap 'kill 0' INT TERM EXIT; \
 	$(UVRUN) --with sphinx-autobuild sphinx-autobuild \
 		-c $(SITE) docs/examples $(SITE_BUILD) --port 8000 & \
 	$(NPM) --prefix $(FRONTEND) start & \
 	wait
 
-check: extract
+check: extract react-package
 	@$(FRONTEND)/node_modules/.bin/tsc -p $(FRONTEND) --noEmit
 
 clean:
