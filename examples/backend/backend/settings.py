@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-ftm+&432ut!+$gdegfmy-5gb4aaicrwcu_d)i873+aren1(wsx
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['rxdjango.org', 'www.rxdjango.org']
 
 
 # Application definition
