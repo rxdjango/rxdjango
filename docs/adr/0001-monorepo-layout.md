@@ -50,9 +50,6 @@ Each package additionally has its own `adr/` folder for implementation-internal 
 - Releases need automation that can publish to PyPI and npm from a single tag. Tooling exists (changesets, release-please, etc.) but must be set up.
 - A larger checkout for contributors who only care about one half.
 
-### Neutral
-- ADRs are split between cross-cutting (`/docs/adr/`) and per-package (`packages/*/adr/`). This is independent of the repo decision — it follows from keeping developer APIs together while letting implementation choices stay local.
-
 ## Alternatives Considered
 
 ### Option A: Three repositories (`rxdjango`, `rxdjango-core`, `rxdjango-react`)
