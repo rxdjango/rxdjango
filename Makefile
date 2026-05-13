@@ -15,6 +15,9 @@ UVRUN        ?= uv run
 SPHINXBUILD  ?= $(UVRUN) sphinx-build
 
 FRONTEND      = examples/frontend
+BACKEND       = examples/backend
+PID_FILE      = backend.pid
+ENV_FILE      = .env
 REACT_PACKAGE = packages/react
 SITE          = site
 SITE_BUILD    = $(SITE)/_build/html
@@ -23,7 +26,7 @@ EXAMPLES_OUT  = $(SITE_BUILD)/react
 
 .DEFAULT_GOAL := help
 
-.PHONY: help extract react-package docs examples site dev check clean
+.PHONY: help extract react-package docs examples site dev check clean deploy
 
 help:
 	@echo "Targets:"
@@ -35,6 +38,7 @@ help:
 	@echo "  make dev       Live-reload dev: sphinx-autobuild + react dev server"
 	@echo "  make check     Run docgen + tsc --noEmit on the frontend"
 	@echo "  make clean     Remove all build artifacts"
+	@echo "  make deploy    Build site then restart the gunicorn backend"
 
 extract:
 	@$(PYTHON) tools/docgen/docgen.py
@@ -69,6 +73,26 @@ dev: extract react-package
 
 check: extract react-package
 	@$(FRONTEND)/node_modules/.bin/tsc -p $(FRONTEND) --noEmit
+
+deploy: site
+	@if [ -f $(PID_FILE) ]; then \
+		OLD_PID=$$(cat $(PID_FILE)); \
+		if kill -0 "$$OLD_PID" 2>/dev/null; then \
+			echo "Stopping existing process (PID $$OLD_PID)..."; \
+			kill "$$OLD_PID"; \
+			sleep 1; \
+		fi; \
+		rm -f $(PID_FILE); \
+	fi
+	@if [ -f $(ENV_FILE) ]; then set -a && source $(ENV_FILE) && set +a; fi
+	@cd $(BACKEND) && \
+		../../.venv/bin/gunicorn backend.asgi:application \
+		--bind 127.0.0.1:8000 \
+		-w 1 \
+		-k uvicorn.workers.UvicornWorker \
+		--pid ../../$(PID_FILE) \
+		--daemon
+	@echo "Backend started (PID $$(cat $(PID_FILE)))"
 
 clean:
 	@$(MAKE) -C $(SITE) clean
