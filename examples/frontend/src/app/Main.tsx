@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { RxDjangoLogo } from './RxDjangoLogo';
 import { pages, type Page } from './examples/pages.generated';
-import { ExampleDemoBox } from './components/ExampleLayout';
 
 // CRA sets PUBLIC_URL from package.json "homepage" at build time;
 // it is "" in dev and e.g. "/react" in production.
@@ -64,8 +63,8 @@ export function Main() {
 
   if (route.demoOnly && ActiveDemo != null) {
     return (
-      <div className="flex h-dvh min-h-0 flex-col bg-primary-100/50 p-6 font-sans text-ink">
-        <ExampleDemoBox demo={<ActiveDemo />} />
+      <div className="min-h-dvh bg-transparent p-6 font-sans text-ink">
+        <ActiveDemo />
       </div>
     );
   }
