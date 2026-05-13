@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title|striptags|e }} — {{ project }}</title>
+  <link rel="stylesheet" href="{{ pathto('_static/custom.css', 1) }}">
+  <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <a href="{{ pathto(master_doc) }}" class="logo" aria-label="rxdjango">
+          <svg viewBox="0 0 176 36" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+            <text
+              x="0"
+              y="28"
+              font-family="Inter, system-ui, sans-serif"
+              font-size="26"
+              font-weight="600"
+              letter-spacing="-0.02em"
+            >
+              <tspan fill="#377771">rx</tspan><tspan fill="#100B00">django</tspan>
+            </text>
+          </svg>
+        </a>
+      </div>
+      <nav aria-label="Documentation">
+        <a
+          href="{{ pathto(master_doc) }}"
+          class="nav-link{% if pagename == master_doc %} active{% endif %}"
+        >
+          Home
+        </a>
+        <div class="toctree-wrapper">
+          {{ toctree(maxdepth=2, includehidden=true, titles_only=true, collapse=false) }}
+        </div>
+      </nav>
+    </aside>
+    <main class="content">
+      {% if pagename == master_doc %}
+        <div class="overview">
+          {{ body }}
+        </div>
+      {% elif rxdemo_app %}
+        <div class="example-page">
+          <h1 class="page-title">{{ title|striptags|e }}</h1>
+          <div class="example-grid">
+            <div class="doc-col">
+              {{ body }}
+            </div>
+            <div class="demo-col">
+              <iframe
+                src="{{ demo_base_url }}/react/{{ pagename }}/demo"
+                title="{{ title|striptags|e }} demo"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="overview">
+          {{ body }}
+        </div>
+      {% endif %}
+    </main>
+  </div>
+</body>
+</html>

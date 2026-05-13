@@ -34,5 +34,6 @@ a row to the index below in the same PR.
 | 0006 | [`@memo` derived reactive fields](0006-memo-derived-reactive-fields.md) | 2026-05-11 | Active |
 | 0007 | [Action authorization via a reactive gate field](0007-action-authorization-via-rx-gate.md) | 2026-05-11 | Active |
 | 0008 | [`rx[bool]` is exempt from the "descriptor is a T" rule](0008-rx-bool-non-subclassable.md) | 2026-05-12 | Active |
+| 0009 | [Adopt Sphinx as the main docs site with React examples stitched under `/react`](0009-sphinx-react-stitched-site.md) | 2026-05-13 | Active |
 
 Status is `Active` by default. Use `Superseded by ADR-NNNN` when replaced.

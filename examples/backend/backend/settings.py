@@ -24,9 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ftm+&432ut!+$gdegfmy-5gb4aaicrwcu_d)i873+aren1(wsx'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['rxdjango.org', 'www.rxdjango.org']
 
 
 # Application definition
@@ -63,7 +63,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'backend.urls'
 
 RX_FRONTEND_DIR = os.path.join(BASE_DIR, '../frontend/src/app/rx')
-RX_WEBSOCKET_URL = "ws://localhost:8000"
+RX_WEBSOCKET_URL = "process.env.REACT_APP_RX_WEBSOCKET_URL"
 
 TEMPLATES = [
     {

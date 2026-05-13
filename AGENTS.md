@@ -50,6 +50,20 @@ Accepted architectural decisions are recorded in `docs/adr/` as ADRs. They are *
 - Template at `docs/adr/TEMPLATE.md`; index at `docs/adr/README.md` (update in the same PR that adds an ADR).
 - Consult relevant ADRs before proposing changes that touch their subject area, and reference them by number when explaining non-obvious choices in code or discussion.
 
+## Examples: docs are the source of truth
+
+The example pages shown in `examples/frontend/` are *generated* from the MyST docs in `docs/examples/`. Do not hand-edit the generated files.
+
+- Source: `docs/examples/index.md` (toctree → ordering) and `docs/examples/<slug>.md` (H1 → title, lead paragraph → description, each `## Section` + `literalinclude` → a page section).
+- Generator: `tools/docgen/docgen.py` (stdlib Python, no extra deps). Run with `make extract` (or `python3 tools/docgen/docgen.py` directly) from the repo root.
+- Build orchestration lives in the root `Makefile`: `make docs` (Sphinx → `site/_build/html`), `make examples` (React → `examples/frontend/build`), `make site` (both, stitched), `make dev` (sphinx-autobuild + react dev server in parallel), `make check` (docgen + `tsc --noEmit`). All build targets depend on `extract`.
+- Generated outputs (carry a `// @generated` header — never edit by hand):
+  - `examples/frontend/src/app/examples/<slug>/<Pascal>Page.tsx`
+  - `examples/frontend/src/app/examples/pages.generated.ts` (consumed by `Main.tsx`)
+- Hand-written, lives next to the generated page: `examples/frontend/src/app/examples/<slug>/demo.tsx` (the actual interactive demo).
+- To add a new example: create `docs/examples/<slug>.md`, add the slug to the toctree in `docs/examples/index.md`, write `examples/frontend/src/app/examples/<slug>/demo.tsx` exporting `${Pascal}Demo`, then run the generator.
+- Conventions enforced by the generator: slug → PascalCase for component names; `literalinclude` paths under `examples/frontend/` mark a section as frontend (adds `ExampleClientBadge`); section ids are `${kebab-slug}-${section-name-lower}`.
+
 ## Code style
 
 - In TSX, split JSX elements across multiple lines, even short ones — put children on their own line rather than inlining them with the opening/closing tags. Applies even to trivial cases like `<p>Value: {x}</p>`.

@@ -173,8 +173,10 @@ def _render_module(app, channels, endpoints):
     socket_url = getattr(settings, 'RX_WEBSOCKET_URL', None)
     if not socket_url:
         raise ImproperlyConfigured(
-            "settings.RX_WEBSOCKET_URL is not set. Set it to the websocket "
-            "base URL of your backend (e.g. 'ws://localhost:8000')."
+            "settings.RX_WEBSOCKET_URL is not set. Set it to a JavaScript "
+            "expression evaluating to the websocket base URL of your backend "
+            "(e.g. \"'ws://localhost:8000'\" or "
+            "\"process.env.REACT_APP_WS_URL\")."
         )
 
     lines = header(
@@ -185,7 +187,7 @@ def _render_module(app, channels, endpoints):
         '',
         "import { ContextChannel } from '@rxdjango/react';",
         '',
-        f'const SOCKET_URL = {json.dumps(socket_url)};',
+        f'const SOCKET_URL = {socket_url};',
         '',
     ])
     for channel_cls in channels:
