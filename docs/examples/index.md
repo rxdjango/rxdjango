@@ -12,4 +12,5 @@ carousel
 memo
 authorization
 authorization_meta
+simple_model
 ```
