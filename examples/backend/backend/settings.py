@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'authorization_meta',
 
     'simple_model',
+    'nested_model',
 ]
 
 MIDDLEWARE = [

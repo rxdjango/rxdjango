@@ -16,6 +16,8 @@ import { AuthorizationMetaPage as ExamplesAuthorizationMetaPage } from './exampl
 import { AuthorizationMetaDemo } from './examples/authorization_meta/demo';
 import { SimpleModelPage as ExamplesSimpleModelPage } from './examples/simple_model/SimpleModelPage';
 import { SimpleModelDemo } from './examples/simple_model/demo';
+import { NestedModelPage as ExamplesNestedModelPage } from './examples/nested_model/NestedModelPage';
+import { NestedModelDemo } from './examples/nested_model/demo';
 import { ProjectStatusPage as ProjectStatusPage } from './pages/project-status/Page';
 
 export type Page = {
@@ -37,5 +39,6 @@ export const pages: Page[] = [
   { slug: 'examples/authorization', title: 'Authorization', depth: 1, parent: 'examples', Component: ExamplesAuthorizationPage, Demo: AuthorizationDemo },
   { slug: 'examples/authorization_meta', title: 'Authorization Meta', depth: 1, parent: 'examples', Component: ExamplesAuthorizationMetaPage, Demo: AuthorizationMetaDemo },
   { slug: 'examples/simple_model', title: 'Simple model', depth: 1, parent: 'examples', Component: ExamplesSimpleModelPage, Demo: SimpleModelDemo },
+  { slug: 'examples/nested_model', title: 'Nested model', depth: 1, parent: 'examples', Component: ExamplesNestedModelPage, Demo: NestedModelDemo },
   { slug: 'project-status', title: 'Project status', depth: 0, parent: null, Component: ProjectStatusPage, Demo: null },
 ];

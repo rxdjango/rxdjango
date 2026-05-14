@@ -7,6 +7,7 @@ from authorization_meta import urls as authorization_meta_urls
 from carousel import urls as carousel_urls
 from counter import urls as counter_urls
 from memo import urls as memo_urls
+from nested_model import urls as nested_model_urls
 from simple_model import urls as simple_model_urls
 from testing import urls as testing_urls
 
@@ -18,6 +19,7 @@ APP_URLS = [
     authorization_urls,
     authorization_meta_urls,
     simple_model_urls,
+    nested_model_urls,
 ]
 
 urls = [

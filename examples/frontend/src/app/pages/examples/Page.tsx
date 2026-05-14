@@ -43,6 +43,11 @@ export function ExamplesPage() {
             Simple model
           </a>
         </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/nested_model`} className="text-primary-700 hover:underline">
+            Nested model
+          </a>
+        </li>
       </ul>
     </div>
   );
