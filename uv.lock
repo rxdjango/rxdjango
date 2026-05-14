@@ -981,12 +981,14 @@ source = { editable = "packages/model" }
 dependencies = [
     { name = "channels-redis" },
     { name = "djangorestframework" },
+    { name = "rxdjango" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "channels-redis", specifier = ">=4.1" },
     { name = "djangorestframework", specifier = ">=3" },
+    { name = "rxdjango" },
 ]
 
 [[package]]

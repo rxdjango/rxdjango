@@ -22,6 +22,19 @@ TYPE_MAP = {
     type(None): 'null',
 }
 
+_field_ts_type_resolvers = []
+_module_import_resolvers = []
+
+
+def register_field_ts_type_resolver(resolver):
+    if resolver not in _field_ts_type_resolvers:
+        _field_ts_type_resolvers.append(resolver)
+
+
+def register_module_import_resolver(resolver):
+    if resolver not in _module_import_resolvers:
+        _module_import_resolvers.append(resolver)
+
 
 def _ts_type(py_type):
     origin = typing.get_origin(py_type)
@@ -54,11 +67,11 @@ def create_app_channels(app, apply_changes=True, force=False):
     """Generate {RX_FRONTEND_DIR}/{app}/{app}.channels.ts for an app.
 
     Scans the app's channels module for ContextChannel subclasses and emits
-    a TypeScript class per channel, declaring a typed field for each rx[type]
+    a TypeScript class per channel, declaring a typed field for each rx
     field. Returns a diff string if changes were made (or would be made when
     apply_changes is False), otherwise None.
     """
-    channels = _find_channels(app)
+    channels = find_channels(app)
     if not channels:
         return None
 
@@ -148,7 +161,7 @@ def _list_consumer_patterns(app_name, pattern_list=None, router=None):
     return pattern_list
 
 
-def _find_channels(app):
+def find_channels(app):
     try:
         module = importlib.import_module(f'{app}.channels')
     except ModuleNotFoundError:
@@ -169,6 +182,10 @@ def _find_channels(app):
     return found
 
 
+def _find_channels(app):
+    return find_channels(app)
+
+
 def _render_module(app, channels, endpoints):
     socket_url = getattr(settings, 'RX_WEBSOCKET_URL', None)
     if not socket_url:
@@ -186,6 +203,10 @@ def _render_module(app, channels, endpoints):
     lines.extend([
         '',
         "import { ContextChannel } from '@rxdjango/react';",
+    ])
+    for import_line in _module_imports(app, channels):
+        lines.append(import_line)
+    lines.extend([
         '',
         f'const SOCKET_URL = {socket_url};',
         '',
@@ -207,7 +228,7 @@ def _render_class(channel_cls, endpoint):
         lines.append('  protected baseURL: string = SOCKET_URL;')
         lines.append('')
     for field_name, rx_field in channel_cls._rx_fields.items():
-        ts_type = _ts_type(rx_field.type)
+        ts_type = _rx_field_ts_type(rx_field)
         if rx_field.has_default:
             literal = _ts_literal(rx_field.default)
             if literal is not None:
@@ -224,6 +245,24 @@ def _render_class(channel_cls, endpoint):
         lines.extend(_render_action(method))
     lines.append('}')
     return lines
+
+
+def _rx_field_ts_type(rx_field):
+    for resolver in _field_ts_type_resolvers:
+        ts_type = resolver(rx_field)
+        if ts_type is not None:
+            return ts_type
+    return _ts_type(rx_field.type)
+
+
+def _module_imports(app, channels):
+    lines = []
+    for resolver in _module_import_resolvers:
+        imports = resolver(app, channels)
+        if not imports:
+            continue
+        lines.extend(imports)
+    return list(dict.fromkeys(lines))
 
 
 def _render_action(method):

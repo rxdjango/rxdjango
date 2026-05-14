@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useChannel } from '@rxdjango/react';
-import { AuthorizationChannel } from '../../rx/simple_model/simple_model.channels';
+import { SimpleModelChannel } from '../../rx/simple_model/simple_model.channels';
 import {
   Sections,
   Button,
@@ -10,7 +10,7 @@ import {
 } from '../../components/demo';
 
 export function SimpleModelDemo() {
-  const channel = useChannel(AuthorizationChannel);
+  const channel = useChannel(SimpleModelChannel);
   const [password, setPassword] = useState('password');
 
   return (
