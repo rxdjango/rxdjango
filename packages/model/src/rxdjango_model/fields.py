@@ -6,6 +6,8 @@ from typing import Any
 from rest_framework import serializers
 from rxdjango.rx import RxField, _propagate_to_memos
 
+from .state_model import StateModel
+
 
 _tracked_serializers: set[type[serializers.BaseSerializer]] = set()
 _NoneType = type(None)
@@ -21,10 +23,21 @@ class RxModelField(RxField):
         self.serializer = serializer
         self.serializer_class, self.many = _normalize_serializer(serializer)
         self.name = ''
+        self.state_model: StateModel | None = None
         _tracked_serializers.add(self.serializer_class)
 
     def __set_name__(self, owner, name):
         self.name = name
+
+    def contribute_to_channel(self, channel_cls, field_name):
+        """Build the ``StateModel`` for this field at class-creation time.
+
+        Building eagerly lets us catch serializer-shape errors at import time
+        and lets the generated frontend emit a runtime model map without
+        re-introspecting at request time.
+        """
+        if self.state_model is None:
+            self.state_model = StateModel(self.serializer, many=self.many)
 
     def __get__(self, obj, objtype=None):
         if obj is None:
@@ -42,10 +55,21 @@ class RxModelField(RxField):
             _propagate_to_memos(obj, self.name)
 
     def serialize(self, value: Any) -> Any:
+        """Flatten ``value`` into a list of per-layer dicts.
+
+        Each dict carries a ``_type`` marker that lets the frontend
+        ``StateBuilder`` rebuild the nested structure.
+        """
         if value is None:
             return None
-        data = self.serializer_class(value, many=self.many).data
-        return _plain(data)
+        if self.state_model is None:
+            # Channel class wasn't built through the metaclass (e.g. raw
+            # use in tests). Build lazily.
+            self.state_model = StateModel(self.serializer, many=self.many)
+        flat: list[dict[str, Any]] = []
+        for layer in self.state_model.serialize_state(value):
+            flat.extend(layer)
+        return _plain(flat)
 
     def __repr__(self):
         return f'rx.model({self.serializer!r})'

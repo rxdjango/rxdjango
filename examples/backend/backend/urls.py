@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path
 
-<<<<<<< HEAD
 from authorization import urls as authorization_urls
 from authorization_meta import urls as authorization_meta_urls
 from carousel import urls as carousel_urls
@@ -26,7 +25,6 @@ urls = [
     path('admin/', admin.site.urls),
 ]
 
-<<<<<<< HEAD
 for app_urls in APP_URLS:
     urls += app_urls.urls
 

@@ -35,6 +35,13 @@ class RxField:
     allowed: tuple = ()
     name: str = ''
 
+    def contribute_to_channel(self, channel_cls, field_name):
+        """Hook called by ``ContextChannelMeta`` once the channel class is
+        built. Subclasses override this to perform compile-time setup that
+        depends on the channel class context (e.g. building a ``StateModel``
+        from a serializer)."""
+        return None
+
     def __class_getitem__(cls, t):
         allowed = _resolve_allowed(t)
         for a in allowed:

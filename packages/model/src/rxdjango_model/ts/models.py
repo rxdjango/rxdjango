@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 
 from django.conf import settings
@@ -9,6 +10,7 @@ from rxdjango.sdk import register_app_generator
 from rxdjango.ts import header
 from rxdjango.ts.channels import (
     find_channels,
+    register_channel_extras_resolver,
     register_field_ts_type_resolver,
     register_module_import_resolver,
 )
@@ -19,7 +21,48 @@ from rxdjango_model.fields import RxModelField
 def install_typescript_hooks() -> None:
     register_field_ts_type_resolver(resolve_model_field_ts_type)
     register_module_import_resolver(resolve_model_imports)
+    register_channel_extras_resolver(resolve_channel_extras)
     register_app_generator(create_app_models)
+
+
+def resolve_channel_extras(channel_cls):
+    """Emit a ``_modelFields`` map for each rx.model field on the channel.
+
+    The frontend ``StateBuilder`` uses this map to rebuild a nested instance
+    from the flat array of layers sent over the wire.
+    """
+    entries = []
+    for field_name, rx_field in channel_cls._rx_fields.items():
+        if not isinstance(rx_field, RxModelField):
+            continue
+        state_model = rx_field.state_model
+        if state_model is None:
+            continue
+        entries.append((
+            field_name,
+            state_model.instance_type,
+            state_model.frontend_model(),
+        ))
+    if not entries:
+        return []
+
+    lines = ['protected _modelFields: Record<string, {']
+    lines.append('    anchor: string;')
+    lines.append('    model: Record<string, Record<string, string>>;')
+    lines.append('  }> = {')
+    for field_name, anchor, model_map in entries:
+        lines.append(f'    {json.dumps(field_name)}: {{')
+        lines.append(f'      anchor: {json.dumps(anchor)},')
+        lines.append('      model: {')
+        for type_name, relations in model_map.items():
+            rels = ', '.join(
+                f'{json.dumps(k)}: {json.dumps(v)}' for k, v in relations.items()
+            )
+            lines.append(f'        {json.dumps(type_name)}: {{ {rels} }},')
+        lines.append('      },')
+        lines.append('    },')
+    lines.append('  };')
+    return lines
 
 
 def create_app_models(app, apply_changes=True, force=False):
@@ -80,16 +123,35 @@ def _collect_app_serializers(app):
 def _collect_serializers(channels):
     seen = set()
     serializers_used = []
+
+    def visit(serializer_class):
+        if serializer_class in seen:
+            return
+        seen.add(serializer_class)
+        serializers_used.append(serializer_class)
+        try:
+            instance = serializer_class()
+        except Exception:
+            return
+        for field in instance.fields.values():
+            child_cls = _nested_serializer_class(field)
+            if child_cls is not None:
+                visit(child_cls)
+
     for channel_cls in channels:
         for rx_field in channel_cls._rx_fields.values():
             if not isinstance(rx_field, RxModelField):
                 continue
-            serializer_class = rx_field.serializer_class
-            if serializer_class in seen:
-                continue
-            seen.add(serializer_class)
-            serializers_used.append(serializer_class)
+            visit(rx_field.serializer_class)
     return serializers_used
+
+
+def _nested_serializer_class(field):
+    if isinstance(field, serializers.ListSerializer):
+        return type(field.child)
+    if isinstance(field, serializers.BaseSerializer):
+        return type(field)
+    return None
 
 
 def _render_models_module(app, serializers_used):

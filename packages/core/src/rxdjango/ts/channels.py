@@ -24,6 +24,7 @@ TYPE_MAP = {
 
 _field_ts_type_resolvers = []
 _module_import_resolvers = []
+_channel_extras_resolvers = []
 
 
 def register_field_ts_type_resolver(resolver):
@@ -34,6 +35,14 @@ def register_field_ts_type_resolver(resolver):
 def register_module_import_resolver(resolver):
     if resolver not in _module_import_resolvers:
         _module_import_resolvers.append(resolver)
+
+
+def register_channel_extras_resolver(resolver):
+    """Register a resolver that returns extra class-body lines for a given
+    channel class. Used by ``rxdjango_model`` to emit the runtime model map
+    that ``StateBuilder`` needs."""
+    if resolver not in _channel_extras_resolvers:
+        _channel_extras_resolvers.append(resolver)
 
 
 def _ts_type(py_type):
@@ -240,6 +249,12 @@ def _render_class(channel_cls, endpoint):
                 f"declare it as Optional (include None in the type) so it can be initialized as null."
             )
         lines.append(f'  {field_name}: {ts_type} = null;')
+    for resolver in _channel_extras_resolvers:
+        extra = resolver(channel_cls)
+        if not extra:
+            continue
+        lines.append('')
+        lines.extend(f'  {line}' for line in extra)
     for method in list_actions(channel_cls):
         lines.append('')
         lines.extend(_render_action(method))
