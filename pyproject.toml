@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "gunicorn>=23.0.0",
     "myst-parser>=4.0.1",
+    "playwright>=1.50.0",
     "uvicorn[standard]>=0.34.0",
     "pip>=26.1.1",
     "rxdjango",

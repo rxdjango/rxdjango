@@ -7,7 +7,22 @@ and the rejection path (increment without authorization returns 403).
 
 from __future__ import annotations
 
+from playwright.sync_api import expect
+
+from testing.e2e import RxE2ETestCase
 from testing.integration import RxIntegrationTestCase
+
+
+class AuthorizationE2ETests(RxE2ETestCase):
+    def test_authorize_then_increment_updates_counter_value(self):
+        page = self.goto_demo('examples/authorization')
+
+        expect(self.field('Counter value')).to_have_text('0')
+
+        page.get_by_role('button', name='Authorize').click()
+        page.get_by_role('button', name='Increment').click()
+
+        expect(self.field('Counter value')).to_have_text('1')
 
 
 class AuthorizationIntegrationTests(RxIntegrationTestCase):

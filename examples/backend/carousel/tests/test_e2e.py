@@ -1,4 +1,4 @@
-"""End-to-end browser test for the memo example."""
+"""End-to-end browser test for the carousel example."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from playwright.sync_api import expect
 from testing.e2e import RxE2ETestCase
 
 
-class MemoE2ETests(RxE2ETestCase):
-    def test_next_button_updates_memoized_visible_fields(self):
-        page = self.goto_demo('examples/memo')
+class CarouselE2ETests(RxE2ETestCase):
+    def test_next_button_rotates_visible_fields(self):
+        page = self.goto_demo('examples/carousel')
 
         expect(self.field('Selected')).to_have_text('0')
         expect(self.field('Fruit')).to_have_text('banana')
