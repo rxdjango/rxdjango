@@ -1,5 +1,5 @@
 from .fields import RxModelField, install_model_field, tracked_serializers
-from .typescript import install_typescript_hooks
+from .ts.models import install_typescript_hooks
 
 
 install_model_field()

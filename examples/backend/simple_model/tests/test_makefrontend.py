@@ -7,7 +7,7 @@ from rxdjango.testing.ts_ast import find_member, parse_ts_file
 from rxdjango.ts.channels import create_app_channels
 
 from rxdjango_model import tracked_serializers
-from rxdjango_model.typescript import create_app_models
+from rxdjango_model.ts.models import create_app_models
 from simple_model.channels import SimpleModelChannel
 from simple_model.serializers import UserSerializer
 

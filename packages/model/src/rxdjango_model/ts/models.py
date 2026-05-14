@@ -13,7 +13,7 @@ from rxdjango.ts.channels import (
     register_module_import_resolver,
 )
 
-from .fields import RxModelField
+from rxdjango_model.fields import RxModelField
 
 
 def install_typescript_hooks() -> None:
