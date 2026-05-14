@@ -22,21 +22,16 @@ class CounterProtocolTests(RxProtocolTestCase):
         self.wait_for('channel.counter !== before')
         trace = self.get_trace()
 
-        self.assertGreater(len(trace), 0, f'expected frames, got {trace!r}')
-
-        for frame in trace:
-            self.assertIn(frame['from'], ('server', 'client'))
-            self.assertIn('data', frame)
-
-        client_frames = [f for f in trace if f['from'] == 'client']
-        server_frames = [f for f in trace if f['from'] == 'server']
-
-        self.assertTrue(
-            any('increment' in repr(f['data']) for f in client_frames),
-            f'expected an increment action in client frames: {client_frames!r}',
-        )
-
-        self.assertTrue(
-            len(server_frames) >= 2,
-            f'expected initial state + at least one delta from server, got {server_frames!r}',
-        )
+        self.assertEqual(len(trace), 4)
+        self.assertEqual(trace[0], {'from': 'server',
+                                    'data': {'protocol': '0.1.0', 't': 'ready'},
+                                    })
+        self.assertEqual(trace[1], {'from': 'client',
+                                    'data': {'a': 'increment', 'id': '1', 'p': [], 't': 'ac'},
+                                    })
+        self.assertEqual(trace[2], {'from': 'server',
+                                    'data': {'e': 0, 'id': '1', 'r': None, 't': 'ac'},
+                                    })
+        self.assertEqual(trace[3], {'from': 'server',
+                                    'data': {'f': 'counter', 't': 'rx', 'v': 1},
+                                    })
