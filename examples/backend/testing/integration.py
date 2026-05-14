@@ -225,13 +225,33 @@ class RxIntegrationTestCase(ChannelsLiveServerTestCase):
     def wait_for(self, condition: str, timeout: int = 2000) -> None:
         self.instructions.append(WaitInstruction(condition, timeout))
 
+    # Hook for subclasses to inject code before the channel is constructed
+    # (e.g. to wrap globalThis.WebSocket). Default: nothing.
+    runner_preamble: str = ''
+
+    # Optional extra payload assembled in the runner and emitted alongside the
+    # result variable. Subclasses set this to a JS expression; when non-empty,
+    # stdout becomes `{"result": <variable>, "<extra_payload_key>": <expr>}`.
+    extra_payload_key: str = ''
+    extra_payload_expr: str = ''
+
     def get_result(self, variable: str):
         body = ''.join(instr.render() for instr in self.instructions)
+
+        if self.extra_payload_key:
+            output_expr = (
+                '{ result: ' + variable
+                + ', ' + self.extra_payload_key + ': ' + self.extra_payload_expr
+                + ' }'
+            )
+        else:
+            output_expr = variable
 
         code = (
             f'import {{ {self.channel} }} from '
             f'"./{self.app_label}/{self.app_label}.channels.ts";\n'
-            r"""
+            + self.runner_preamble
+            + r"""
 const wsUrl = process.argv[2];
 if (!wsUrl) {
   console.error("usage: runner.ts <ws-url>");
@@ -250,7 +270,7 @@ async function main() {
     });
   });
 """ + body + r"""
-  process.stdout.write(JSON.stringify(""" + variable + r"""));
+  process.stdout.write(JSON.stringify(""" + output_expr + r"""));
   process.exit(0);
 }
 
@@ -271,4 +291,56 @@ main().catch((err) => {
 
         self.instructions = []
 
-        return json.loads(result.stdout)
+        parsed = json.loads(result.stdout)
+        if self.extra_payload_key:
+            self._last_extra = parsed.get(self.extra_payload_key)
+            return parsed['result']
+        return parsed
+
+
+_PROTOCOL_TRACE_PREAMBLE = r"""
+const __trace: any[] = [];
+const __OriginalWebSocket: any = (globalThis as any).WebSocket;
+class __TracingWebSocket extends __OriginalWebSocket {
+  constructor(url: string, protocols?: any) {
+    super(url, protocols);
+    this.addEventListener('message', (ev: any) => {
+      let parsed: any;
+      try { parsed = JSON.parse(ev.data); } catch { parsed = ev.data; }
+      __trace.push({ from: 'server', data: parsed });
+    });
+    const origSend = super.send.bind(this);
+    (this as any).send = (data: any) => {
+      let parsed: any;
+      try { parsed = JSON.parse(data); } catch { parsed = data; }
+      __trace.push({ from: 'client', data: parsed });
+      return origSend(data);
+    };
+  }
+}
+(globalThis as any).WebSocket = __TracingWebSocket;
+"""
+
+
+class RxProtocolTestCase(RxIntegrationTestCase):
+    """Like RxIntegrationTestCase, but captures every websocket frame.
+
+    Each captured frame is `{ from: 'server' | 'client', data: <parsed JSON> }`.
+    Retrieve the full trace after running instructions with `get_trace()`, or
+    use `get_result()` as usual and read `self.last_trace`.
+    """
+
+    runner_preamble = _PROTOCOL_TRACE_PREAMBLE
+    extra_payload_key = 'trace'
+    extra_payload_expr = '__trace'
+
+    last_trace: list = []
+
+    def get_result(self, variable: str):
+        result = super().get_result(variable)
+        self.last_trace = self._last_extra or []
+        return result
+
+    def get_trace(self) -> list:
+        self.get_result('null')
+        return self.last_trace
