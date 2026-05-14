@@ -16,9 +16,9 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 
 app = get_asgi_application()
 
-from backend.urls import websocket_urlpatterns
+from backend.urls import websocket_urls
 
 application = ProtocolTypeRouter({
     "http": app,
-    "websocket": URLRouter(websocket_urlpatterns),
+    "websocket": URLRouter(websocket_urls),
 })
