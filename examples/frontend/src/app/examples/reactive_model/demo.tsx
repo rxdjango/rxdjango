@@ -21,7 +21,7 @@ export function ReactiveModelDemo() {
       <div>
         <Note>
           Modify the project name with a delay. The update happens in a background
-          thread outside the channel context — demonstrating that external changes
+          thread outside the channel context, demonstrating that external changes
           to a model instance are pushed reactively to the frontend.
         </Note>
         <Row>
