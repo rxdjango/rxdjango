@@ -87,6 +87,14 @@ TEMPLATES = [
 
 ASGI_APPLICATION = 'backend.asgi.application'
 
+# RxDjango reactive broadcasts go through the Channels channel layer. The
+# in-memory layer is enough for the single-process examples and test suite;
+# a multi-process deployment would use channels-redis instead.
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 

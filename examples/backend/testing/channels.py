@@ -1,5 +1,8 @@
 from rxdjango import ContextChannel, rx, action, memo
 
+from .models import VersionedCounter
+from .serializers import VersionedCounterSerializer
+
 
 class TestingChannel(ContextChannel):
 
@@ -50,3 +53,36 @@ class MemoTrackingChannel(ContextChannel):
     def double_b(self):
         self.count_b = self.count_b + 1
         return self.field_b * 2
+
+
+class VersionConsistencyChannel(ContextChannel):
+    """Exercises the client-side version watermark (ADR-0014).
+
+    The server subscribes before fetching, so a snapshot can arrive after a
+    newer event for the same row. ``on_connect`` reproduces that race
+    deterministically: it relays a mock layer carrying a far-newer ``_v``
+    *before* fetching the real (older-version) row from the database. A client
+    that reconciles by version keeps the mock; one that takes last-write-wins
+    by arrival order would be overwritten by the stale snapshot.
+    """
+
+    MOCK_VERSION = 1_000_000
+    MOCK_VALUE = 999
+
+    counter = rx.model(VersionedCounterSerializer())
+    # Set last in on_connect; the client waits on it to know the real
+    # (post-mock) snapshot has been delivered and reconciled.
+    loaded = rx[bool](False)
+
+    async def on_connect(self):
+        # 1. Relay a mock layer with a newer version, ahead of the DB fetch.
+        instance_type = type(self)._rx_fields['counter'].state_model.instance_type
+        await self._consumer.send_model_layer('counter', {
+            '_type': instance_type,
+            'id': 1,
+            'value': self.MOCK_VALUE,
+            '_v': self.MOCK_VERSION,
+        })
+        # 2. Fetch the real instance (older version) and assign it.
+        self.counter = await VersionedCounter.objects.aget(id=1)
+        self.loaded = True

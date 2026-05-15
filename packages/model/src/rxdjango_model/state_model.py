@@ -90,13 +90,17 @@ class StateModel:
     def serialize_instance(self, instance: Model) -> dict[str, Any]:
         data = dict(self.flat_serializer(instance).data)
         data['_type'] = self.instance_type
+        _attach_version(data, instance)
         return data
 
-    def serialize_delete(self, instance: Model) -> dict[str, Any]:
-        return {
+    def serialize_delete(self, instance: Model, version: int | None = None) -> dict[str, Any]:
+        data: dict[str, Any] = {
             '_type': self.instance_type,
             '_del': instance.pk,
         }
+        if version is not None:
+            data['_v'] = version
+        return data
 
     def serialize_state(self, instance: Any) -> Generator[list[dict[str, Any]], None, None]:
         """Yield each layer of the nested instance as a flat list of dicts.
@@ -113,8 +117,9 @@ class StateModel:
             instances = [instance]
             data = [dict(self.flat_serializer(instance).data)]
 
-        for serialized in data:
+        for serialized, inst in zip(data, instances):
             serialized['_type'] = self.instance_type
+            _attach_version(serialized, inst)
 
         yield data
 
@@ -174,6 +179,19 @@ class StateModel:
             return StateModel(serializer, many=False, origin=self)
 
         return None
+
+
+def _attach_version(data: dict[str, Any], instance: Any) -> None:
+    """Copy a ``ReactiveModel`` row's ``_v`` onto its flat layer.
+
+    The version is not a serializer field, so it is welded on here. Layers from
+    non-reactive models carry no ``_v``; the client ``StateBuilder`` treats a
+    versionless layer as always-apply (such a model emits no events, so there
+    is no race to reconcile).
+    """
+    version = getattr(instance, '_v', None)
+    if version is not None:
+        data['_v'] = version
 
 
 def is_model_serializer(field: serializers.BaseSerializer) -> bool:

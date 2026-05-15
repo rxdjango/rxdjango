@@ -8,6 +8,17 @@ class ReactiveModelIntegrationTests(RxIntegrationTestCase):
     channel = 'ReactiveModelChannel'
     url = '/ws/reactive_model/'
 
+    def setUp(self):
+        super().setUp()
+        # Seed the sample instances the channel resolves by id in on_connect;
+        # the migration-seeded rows do not survive the per-test flush.
+        project, _ = Project.objects.update_or_create(
+            id=1, defaults={'name': 'My Project'},
+        )
+        Task.objects.update_or_create(
+            id=1, defaults={'name': 'First Task', 'project': project},
+        )
+
     def test_task_and_project_are_pushed_on_connect(self):
         self.wait_for('channel.task !== null')
         result = self.get_result('{ name: channel.task.name, project: channel.task.project.name }')

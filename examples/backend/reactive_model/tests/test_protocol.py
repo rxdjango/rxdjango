@@ -16,6 +16,17 @@ class ReactiveModelProtocolTests(RxProtocolTestCase):
     channel = 'ReactiveModelChannel'
     url = '/ws/reactive_model/'
 
+    def setUp(self):
+        super().setUp()
+        # Seed the sample instances the channel resolves by id in on_connect;
+        # the migration-seeded rows do not survive the per-test flush.
+        project, _ = Project.objects.update_or_create(
+            id=1, defaults={'name': 'My Project'},
+        )
+        Task.objects.update_or_create(
+            id=1, defaults={'name': 'First Task', 'project': project},
+        )
+
     def test_initial_push_carries_two_flat_dicts(self):
         self.wait_for('channel.task !== null')
         self.get_trace()

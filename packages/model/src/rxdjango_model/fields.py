@@ -6,6 +6,7 @@ from typing import Any
 from rest_framework import serializers
 from rxdjango.rx import RxField, _propagate_to_memos
 
+from .reactive_registry import register_layer
 from .state_model import StateModel
 
 
@@ -35,9 +36,21 @@ class RxModelField(RxField):
         Building eagerly lets us catch serializer-shape errors at import time
         and lets the generated frontend emit a runtime model map without
         re-introspecting at request time.
+
+        This hook also populates the reactive index: each ``StateModel`` layer
+        backed by a ``ReactiveModel`` is registered so that model's write path
+        knows which broadcast groups a row change reaches. ``ContextChannelMeta``
+        invokes this for every channel, so the index is complete once all
+        channel modules are imported.
         """
         if self.state_model is None:
             self.state_model = StateModel(self.serializer, many=self.many)
+        # Imported lazily: ReactiveModel is a Django model and cannot be
+        # imported while app modules are still loading.
+        from .reactive_model import ReactiveModel
+        for layer in self.state_model.models():
+            if isinstance(layer.model, type) and issubclass(layer.model, ReactiveModel):
+                register_layer(layer)
 
     def __get__(self, obj, objtype=None):
         if obj is None:
