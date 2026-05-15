@@ -152,7 +152,12 @@ class RxIntegrationTestCase(ChannelsLiveServerTestCase):
 
         self.instructions: list[Instruction] = []
 
-        with override_settings(RX_FRONTEND_DIR=str(self.workdir)):
+        with override_settings(
+            RX_FRONTEND_DIR=str(self.workdir),
+            RX_WEBSOCKET_URL=json.dumps(
+                self.live_server_url.replace('http://', 'ws://')
+            ),
+        ):
             create_app_channels(self.app_label)
 
         self._install_fake_package(

@@ -11,7 +11,10 @@ dependencies = [
     "pip>=26.1.1",
     "rxdjango",
     "sphinx>=8.2.3",
+    "rxdjango-model",
+    "daphne>=4.1.0",
 ]
 
 [tool.uv.sources]
-rxdjango = { path = "packages/python", editable = true }
+rxdjango = { path = "packages/core", editable = true }
+rxdjango-model = { path = "packages/model", editable = true }

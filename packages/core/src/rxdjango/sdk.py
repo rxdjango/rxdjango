@@ -4,6 +4,14 @@ from django.core.exceptions import ImproperlyConfigured
 from rxdjango.ts.channels import create_app_channels
 
 
+_app_generators = [create_app_channels]
+
+
+def register_app_generator(generator):
+    if generator not in _app_generators:
+        _app_generators.append(generator)
+
+
 def make_sdk(apply_changes=True, quiet=False, force=False):
     print("Generating RxDjango SDK")
     check()
@@ -17,10 +25,11 @@ def make_sdk(apply_changes=True, quiet=False, force=False):
     changed = False
 
     for app in installed_apps:
-        diff = create_app_channels(app, apply_changes, force)
-        if diff:
-            changed = True
-            log(diff)
+        for generator in _app_generators:
+            diff = generator(app, apply_changes, force)
+            if diff:
+                changed = True
+                log(diff)
 
     return changed
 

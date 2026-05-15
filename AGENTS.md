@@ -24,7 +24,7 @@ IMPORTANT: This repository path is https://github.com/rxdjango/rxdjango, NOT CDI
 
 ## Development environment
 
-The Python package lives at `packages/python/` (installable as `rxdjango`, hatchling build). The repo root is a uv workspace that installs it as an editable dependency.
+The Python package lives at `packages/core/` (installable as `rxdjango`, hatchling build). The repo root is a uv workspace that installs it as an editable dependency.
 
 To set up or refresh the environment:
 
@@ -39,7 +39,7 @@ uv run python -c "import rxdjango; print(rxdjango.__version__)"
 uv run pytest
 ```
 
-Edits inside `packages/python/src/rxdjango/` are picked up immediately — no reinstall needed.
+Edits inside `packages/core/src/rxdjango/` are picked up immediately — no reinstall needed.
 
 ## Architecture decisions
 

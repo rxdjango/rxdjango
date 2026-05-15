@@ -36,5 +36,8 @@ a row to the index below in the same PR.
 | 0007 | [Action authorization via a reactive gate field](0007-action-authorization-via-rx-gate.md) | 2026-05-11 | Active |
 | 0008 | [`rx[bool]` is exempt from the "descriptor is a T" rule](0008-rx-bool-non-subclassable.md) | 2026-05-12 | Active |
 | 0009 | [Adopt Sphinx as the main docs site with React examples stitched under `/react`](0009-sphinx-react-stitched-site.md) | 2026-05-13 | Active |
+| 0010 | [`rx.model(serializer)` reactive nested-state fields](0010-rx-model-reactive-nested-state.md) | 2026-05-15 | Active |
+| 0011 | [Reactive model support as per-backend packages on a plugin-extensible core](0011-per-backend-model-packages-and-codegen-hooks.md) | 2026-05-15 | Active |
+| 0012 | [Flat-layer wire protocol for `rx.model` nested state](0012-flat-layer-wire-protocol.md) | 2026-05-15 | Active |
 
 Status is `Active` by default. Use `Superseded by ADR-NNNN` when replaced.

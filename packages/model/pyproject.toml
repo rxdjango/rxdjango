@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "rxdjango"
+name = "rxdjango-model"
 version = "0.1.0"
-description = "Django-React real-time state synchronization via WebSockets"
+description = "Django model state synchronization for RxDjango"
 readme = "README.md"
 license = { file = "LICENSE.md" }
 authors = [
@@ -26,11 +26,9 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
 dependencies = [
-    "Django>=4.2",
-    "channels>=4",
-    "channels-redis>=4.1",
+    "rxdjango",
     "djangorestframework>=3",
-    "daphne>=4.1.0",
+    "channels-redis>=4.1",
 ]
 
 [project.urls]
@@ -38,11 +36,11 @@ Homepage = "https://github.com/rxdjango/rxdjango"
 Repository = "https://github.com/rxdjango/rxdjango"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/rxdjango"]
+packages = ["src/rxdjango_model"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/rxdjango",
+    "src/rxdjango_model",
     "README.md",
     "LICENSE.md",
 ]

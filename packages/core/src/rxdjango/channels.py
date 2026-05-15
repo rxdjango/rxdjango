@@ -28,6 +28,9 @@ class ContextChannelMeta(type):
         new_class._memo_order = _topological_memo_order(new_class)
         _initialize_memo_defaults(new_class)
 
+        for field_name, rx_field in new_class._rx_fields.items():
+            rx_field.contribute_to_channel(new_class, field_name)
+
         return new_class
 
 

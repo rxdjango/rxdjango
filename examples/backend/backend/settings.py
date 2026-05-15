@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'rxdjango',
+    'rxdjango_model',
     'daphne',
     'django.contrib.staticfiles',
     'channels',
@@ -48,6 +49,9 @@ INSTALLED_APPS = [
     'testing',
     'authorization',
     'authorization_meta',
+
+    'simple_model',
+    'nested_model',
 ]
 
 MIDDLEWARE = [
@@ -63,7 +67,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'backend.urls'
 
 RX_FRONTEND_DIR = os.path.join(BASE_DIR, '../frontend/src/app/rx')
-RX_WEBSOCKET_URL = "process.env.REACT_APP_RX_WEBSOCKET_URL"
+RX_WEBSOCKET_URL = "(process.env.REACT_APP_RX_WEBSOCKET_URL ?? 'ws://localhost:8000') as string"
 
 TEMPLATES = [
     {
