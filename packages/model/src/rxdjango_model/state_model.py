@@ -28,6 +28,10 @@ class StateModel:
         self.nested_serializer = state_serializer
         self.many = many
         self.origin = origin
+        # Set True for layers backed by a ReactiveModel (see
+        # RxModelField.contribute_to_channel). A reactive layer means each of
+        # its instances carries a broadcast group the consumer must join.
+        self.reactive = False
 
         if origin is None:
             self.index = defaultdict(list)
@@ -102,17 +106,21 @@ class StateModel:
             data['_v'] = version
         return data
 
-    def serialize_state(self, instance: Any) -> Generator[list[dict[str, Any]], None, None]:
-        """Yield each layer of the nested instance as a flat list of dicts.
+    def serialize_state(
+        self, instance: Any
+    ) -> Generator[tuple['StateModel', list[dict[str, Any]]], None, None]:
+        """Yield ``(node, layer)`` pairs for the nested instance.
 
-        Each yielded layer is a list of one or more flat instances of the
-        same ``_type``. Callers usually concatenate the layers into a single
-        list for transport.
+        Each ``layer`` is a flat list of instances of one ``_type``; ``node``
+        is the ``StateModel`` that produced it, so a caller can tell a reactive
+        layer from a plain one without re-inspecting the payload. Callers
+        usually concatenate the layers into a single list for transport.
         """
         if self.many:
             queryset = instance.all() if hasattr(instance, 'all') else instance
             instances = list(queryset)
-            data = [dict(self.flat_serializer(item).data) for item in instances]
+            # One serializer over the whole list rather than one per item.
+            data = [dict(d) for d in self.flat_serializer(instances, many=True).data]
         else:
             instances = [instance]
             data = [dict(self.flat_serializer(instance).data)]
@@ -121,7 +129,7 @@ class StateModel:
             serialized['_type'] = self.instance_type
             _attach_version(serialized, inst)
 
-        yield data
+        yield self, data
 
         for field_name, peer_model in self.children.items():
             for inst in instances:
@@ -131,8 +139,7 @@ class StateModel:
                     continue
                 if peer_instance is None:
                     continue
-                for serialized in peer_model.serialize_state(peer_instance):
-                    yield serialized
+                yield from peer_model.serialize_state(peer_instance)
 
     def _disassemble_nested(self) -> tuple[type[serializers.ModelSerializer], dict[str, serializers.BaseSerializer]]:
         serializer_fields: dict[str, serializers.BaseSerializer] = {}

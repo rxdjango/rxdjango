@@ -87,12 +87,19 @@ TEMPLATES = [
 
 ASGI_APPLICATION = 'backend.asgi.application'
 
-# RxDjango reactive broadcasts go through the Channels channel layer. The
-# in-memory layer is enough for the single-process examples and test suite;
-# a multi-process deployment would use channels-redis instead.
+# RxDjango reactive broadcasts go through the Channels channel layer. A
+# committed write is broadcast from whatever process runs the transaction
+# (a request worker, management command, Celery task), while consumers live
+# in the ASGI process — so the layer must be shared across processes. The
+# in-memory layer is per-process and would silently drop those broadcasts;
+# Redis is required for the reactive write path to work.
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [REDIS_URL],
+        },
     },
 }
 
