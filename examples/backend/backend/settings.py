@@ -52,6 +52,7 @@ INSTALLED_APPS = [
 
     'simple_model',
     'nested_model',
+    'reactive_model',
 ]
 
 MIDDLEWARE = [
