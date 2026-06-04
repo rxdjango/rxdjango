@@ -70,8 +70,24 @@ The example pages shown in `examples/frontend/` are *generated* from the MyST do
 
 ## Running tests
 
-- Python package tests: `uv run pytest` from the repo root.
-- Example/integration tests (Django + Node-driven channel runners):
-  `cd examples/backend && uv run ./manage.py test`. The integration suite
-  builds `packages/react` via `npm run build` on first run, so `npm` and
-  `node` must be on PATH.
+The test suite is the Django suite under `examples/backend`, run with Django's
+own test runner:
+
+```bash
+cd examples/backend && uv run ./manage.py test
+```
+
+This runs 49 tests (integration, protocol, makefrontend, and e2e). Two
+prerequisites:
+
+- **Node toolchain on PATH** — the integration suite builds `packages/react`
+  via `npm run build` on first run, so `npm` and `node` must be available.
+- **Playwright browser** — the e2e tests drive a real browser. Install it once
+  with `uv run playwright install chromium` from the repo root, or the 8 e2e
+  tests error out with a missing-browser-runtime message.
+
+> Note: there is currently no pytest suite for the `rxdjango` core package, and
+> no pytest config at the repo root. Running a bare `uv run pytest` fails during
+> collection (it tries to import the Django example apps and the `rxdjango-0`
+> reference checkout without `DJANGO_SETTINGS_MODULE`). Use the Django runner
+> above.
