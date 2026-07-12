@@ -30,6 +30,12 @@ If no alternatives, suggest alternatives to confirm this is a good decision.
 **Step 3 — Consequences.**
 Draft suggested bullet points for Positive, Negative/Trade-offs, and Neutral consequences based on the decision and context. Present them to the user and ask for confirmation or corrections before writing anything to disk.
 
+**Reference discipline (applies to every step):**
+An ADR may only cite documents that exist in the repository and decisions that existed at the time the ADR is written.
+- Never cite `docs/drafts/` or any uncommitted/session file. Drafts are not decisions — if it were a decision, it would be an ADR.
+- Never reference a prospective or future decision, and never forward-reference a later ADR. If content came from a draft, the ADR must stand on its own: carry the substance, cite nothing that doesn't exist.
+- Before writing to disk, check the ADR text for `drafts`, session-file paths, and mentions of not-yet-made decisions, and strip them.
+
 **Step 4 — Write the files.**
 Only after steps 1–3 are confirmed:
 - Determine the next ADR number (highest NNNN in the index + 1, zero-padded to 4 digits).
