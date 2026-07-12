@@ -109,3 +109,24 @@ async def test_unknown_action_is_forbidden():
     response = await comm.receive_json_from(timeout=1)
     assert response['e'][0] == 403
     await comm.disconnect()
+
+
+async def test_flush_drains_messages_enqueued_mid_send():
+    from rxdjango.consumers import ContextConsumer
+    import json
+
+    consumer = ContextConsumer()
+    sent = []
+
+    async def fake_send(text_data=None, **kwargs):
+        sent.append(json.loads(text_data))
+        if len(sent) == 1:
+            consumer.enqueue_rx('late', 99)
+
+    consumer.send = fake_send
+    consumer.enqueue_rx('a', 1)
+    consumer.enqueue_rx('b', 2)
+    await consumer._flush_rx()
+
+    assert [msg['f'] for msg in sent] == ['a', 'b', 'late']
+    assert consumer._pending_rx == []

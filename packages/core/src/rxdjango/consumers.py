@@ -39,9 +39,12 @@ class ContextConsumer(AsyncWebsocketConsumer):
         self._pending_rx.append({'t': 'rx', 'f': field, 'v': value})
 
     async def _flush_rx(self) -> None:
+        # The outer loop drains messages enqueued while sends were awaited.
         while self._pending_rx:
-            msg = self._pending_rx.pop(0)
-            await self.send(text_data=json.dumps(msg))
+            batch = self._pending_rx
+            self._pending_rx = []
+            for msg in batch:
+                await self.send(text_data=json.dumps(msg))
 
     async def receive(self, text_data: str | None = None, bytes_data: bytes | None = None) -> None:
         if text_data is None:
