@@ -277,3 +277,105 @@ describe("StateBuilder identity semantics (ported from v0)", () => {
     expect(state.tasks![1]!.id).toBe(3);
   });
 });
+
+// Ported from ADR-0014. The server subscribes to the event stream before
+// fetching the initial snapshot, so a snapshot layer can arrive after a
+// newer event for the same row. Layers from reactive models carry a `_v`
+// version and reconcile by watermark, not arrival order; deletes leave a
+// tombstone; versionless layers (non-reactive models) are always applied.
+
+describe("StateBuilder version watermarks (ADR-0014)", () => {
+  it("applies a layer with a higher version", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "old", _v: 1 }),
+    ]);
+    builder.update([task(1, { taskName: "new", _v: 2 })]);
+    expect(builder.state!.tasks![0]!.taskName).toBe("new");
+  });
+
+  it("discards a snapshot layer older than an applied event", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "live event", _v: 2 }),
+    ]);
+    builder.update([task(1, { taskName: "stale snapshot", _v: 1 })]);
+    expect(builder.state!.tasks![0]!.taskName).toBe("live event");
+  });
+
+  it("discards a layer carrying an already-applied version", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "first delivery", _v: 2 }),
+    ]);
+    builder.update([task(1, { taskName: "re-delivery", _v: 2 })]);
+    expect(builder.state!.tasks![0]!.taskName).toBe("first delivery");
+  });
+
+  it("keeps every reference untouched when a stale layer is discarded", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", customer: 2, tasks: [1] }),
+      customer(2, { customerName: "Customer #2", tasks: [1] }),
+      task(1, { taskName: "Task #1", _v: 2 }),
+    ]);
+    const before = builder.state!;
+
+    builder.update([task(1, { taskName: "stale", _v: 1 })]);
+
+    expect(builder.state).toBe(before);
+  });
+
+  it("reconciles an event delivered before the snapshot of the same row", () => {
+    const builder = projectBuilder();
+    builder.update([task(1, { taskName: "live event", _v: 2 })]);
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "stale snapshot", _v: 1 }),
+    ]);
+    expect(builder.state!.tasks![0]!.taskName).toBe("live event");
+  });
+
+  it("does not let a stale snapshot resurrect a deleted row", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1, 2] }),
+      task(1, { taskName: "Task #1", _v: 1 }),
+      task(2, { taskName: "Task #2", _v: 1 }),
+    ]);
+    builder.update([{ _type: "project.TaskSerializer", _del: 2, _v: 2 }]);
+
+    builder.update([task(2, { taskName: "Task #2", _v: 1 })]);
+    expect(builder.state!.tasks!.length).toBe(1);
+
+    // Even when a later parent layer lists the pk again, the tombstone has
+    // kept the stale row out of the index.
+    builder.update([project({ projectName: "Project #1", tasks: [1, 2] })]);
+    expect(builder.state!.tasks![1]).toBeNull();
+  });
+
+  it("discards a delete older than the applied row", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "fresh", _v: 3 }),
+    ]);
+    builder.update([{ _type: "project.TaskSerializer", _del: 1, _v: 2 }]);
+
+    expect(builder.state!.tasks!.length).toBe(1);
+    expect(builder.state!.tasks![0]!.taskName).toBe("fresh");
+  });
+
+  it("always applies versionless layers", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "first" }),
+    ]);
+    builder.update([task(1, { taskName: "second" })]);
+    expect(builder.state!.tasks![0]!.taskName).toBe("second");
+  });
+});
