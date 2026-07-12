@@ -26,10 +26,12 @@ EXAMPLES_OUT  = $(SITE_BUILD)/react
 
 .DEFAULT_GOAL := help
 
-.PHONY: help extract react-package docs examples site dev check test clean deploy
+.PHONY: help extract react-package docs examples site dev demo demo-setup check test clean deploy
 
 help:
 	@echo "Targets:"
+	@echo "  make demo      Set up and run the demo site (backend :8000 + frontend :3000)"
+	@echo "  make demo-setup  Do the demo setup steps without starting anything"
 	@echo "  make extract   Generate React example pages from docs/examples/"
 	@echo "  make react-package  Build @rxdjango/react -> $(REACT_PACKAGE)/dist"
 	@echo "  make docs      Build the Sphinx site (HTML) -> $(SITE_BUILD)"
@@ -61,6 +63,15 @@ site: docs examples
 	@mkdir -p $(EXAMPLES_OUT)
 	@cp -R $(FRONT_BUILD)/. $(EXAMPLES_OUT)/
 	@echo "site: stitched examples into $(EXAMPLES_OUT)"
+
+# Run the demo site itself: Django/Channels backend + React frontend, with the
+# Redis / react-package / migrate prerequisites handled by the script. Distinct
+# from `make dev`, which serves the *docs* (and also wants port 8000).
+demo:
+	@scripts/demo.sh
+
+demo-setup:
+	@scripts/demo.sh --setup-only
 
 # Run docgen once, then sphinx-autobuild and the React dev server in parallel.
 # Edits to docs/examples/*.md currently require re-running `make extract`

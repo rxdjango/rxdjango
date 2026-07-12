@@ -41,6 +41,16 @@ uv run pytest
 
 Edits inside `packages/core/src/rxdjango/` are picked up immediately — no reinstall needed.
 
+## Running the demo site
+
+`make demo` (a wrapper around `scripts/demo.sh`) sets up and runs the whole demo: the Django/Channels backend on `:8000` and the React frontend on `:3000`, both in the foreground until you Ctrl-C. Setup is idempotent, so re-running it is cheap.
+
+It exists because three prerequisites are easy to miss: a reachable **Redis** (the channel layer is `channels_redis` with no in-memory fallback — reactive broadcasts silently vanish without it), a built **`packages/react`** (the frontend depends on it via a `file:` path), and **`migrate`** (the demo's seed data ships as data migrations).
+
+Useful variants: `make demo-setup` / `scripts/demo.sh --setup-only` (prepare without starting), `--no-setup` (skip straight to running), `--backend-only` / `--frontend-only`. `BACKEND_PORT`, `FRONTEND_PORT`, and `REDIS_URL` override the defaults.
+
+Do not confuse this with `make dev`, which serves the *docs* (sphinx-autobuild) and also binds port 8000 — the two cannot run at the same time.
+
 ## Architecture decisions
 
 Accepted architectural decisions are recorded in `docs/adr/` as ADRs. They are *records*, not a deliberation workflow — a file exists there only after the decision is made. Conventions:
