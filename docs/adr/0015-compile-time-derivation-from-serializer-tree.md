@@ -10,9 +10,7 @@ RxDjango's `StateModel` introspects a nested `ModelSerializer` tree, and a
 growing amount of framework machinery is *derivable* from that tree: the flat
 per-layer serializers, the frontend relation map, the `instance_type` →
 field-name routing map the consumer uses to route broadcasts, the reactive
-broadcast groups a row change must reach, and — prospectively — the batched
-query plan for initial-state delivery (the StateModel tree *is* the
-prefetch plan).
+broadcast groups a row change must reach.
 
 The intention, held since v0.0.x and throughout the rebuild, has always been
 that all of this is computed **once, at class-creation (import) time**. That
@@ -43,7 +41,7 @@ class-creation time — never per-connection, never per-message.**
 
 Runtime work touches only per-request *data*: model rows, payloads, queue
 contents. *Structure* — serializer instances, relation maps, routing maps,
-broadcast group derivations, query plans — is computed when the channel class
+broadcast group derivations — is computed when the channel class
 is created (at import, via `ContextChannelMeta` /
 `contribute_to_channel`) and reused for the life of the process.
 
@@ -73,8 +71,8 @@ It is a test convenience, not a pattern to extend.
 - Reviewers and agents get a mechanical rule instead of having to infer
   intent; the drift pattern this ADR exists to stop becomes rejectable on
   sight.
-- Future work inherits the rule by default: the layered-walk query plan for
-  initial-state delivery is a compile-time artifact of the same tree.
+- Future work inherits the rule by default: anything newly derivable from
+  the tree is computed at class creation.
 
 ### Negative / Trade-offs
 
@@ -120,8 +118,7 @@ ambiguity that produced drift.
 
 ### Option C: Record each instance case-by-case
 
-Keep pinning individual fixes with tests and code comments, or fold the
-principle into the layered-state-delivery ADR when it is promoted.
+Keep pinning individual fixes with tests and code comments.
 
 **Rejected.** Buries a general rule inside specific documents. The
 individual fixes were already pinned and drift happened anyway; the rule has
