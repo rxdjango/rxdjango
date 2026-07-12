@@ -10,7 +10,11 @@ pytestmark = pytest.mark.django_db
 
 
 def flatten(state_model, instance):
-    return [entry for layer in state_model.serialize_state(instance) for entry in layer]
+    return [
+        entry
+        for _node, layer in state_model.serialize_state(instance)
+        for entry in layer
+    ]
 
 
 def test_tree_shape():

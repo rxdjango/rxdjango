@@ -116,6 +116,7 @@ async def test_flush_drains_messages_enqueued_mid_send():
     import json
 
     consumer = ContextConsumer()
+    consumer.channel_layer = None  # bare instance; ASGI setup normally sets this
     sent = []
 
     async def fake_send(text_data=None, **kwargs):
@@ -129,4 +130,4 @@ async def test_flush_drains_messages_enqueued_mid_send():
     await consumer._flush_rx()
 
     assert [msg['f'] for msg in sent] == ['a', 'b', 'late']
-    assert consumer._pending_rx == []
+    assert not consumer._pending_rx

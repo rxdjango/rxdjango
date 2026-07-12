@@ -11,7 +11,7 @@ master_doc = 'index'
 
 exclude_patterns = [
     '_build', 'Thumbs.db', '.DS_Store',
-    'adr', 'rfcs', 'dev',
+    'adr', 'rfcs', 'dev', 'drafts',
     # Loose drafts not yet linked from the root toctree.
     '01-static-rx-push.md', 'issues.md', 'rxdjango-spec.md',
 ]

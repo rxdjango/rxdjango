@@ -1,4 +1,5 @@
 from .fields import RxModelField, install_model_field, tracked_serializers
+from .reactive_registry import reactive_registry
 from .ts.models import install_typescript_hooks
 
 
@@ -7,5 +8,6 @@ install_typescript_hooks()
 
 __all__ = [
     'RxModelField',
+    'reactive_registry',
     'tracked_serializers',
 ]

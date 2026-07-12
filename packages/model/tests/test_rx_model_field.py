@@ -37,7 +37,7 @@ def test_default_is_none():
 
 
 def test_serialize_none_is_none():
-    assert Channel._rx_fields['company'].serialize(None) is None
+    assert Channel._rx_fields['company'].serialize(None) == (None, [])
 
 
 @pytest.mark.django_db

@@ -48,6 +48,11 @@ export function ExamplesPage() {
             Nested model
           </a>
         </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/reactive_model`} className="text-primary-700 hover:underline">
+            Reactive model
+          </a>
+        </li>
       </ul>
     </div>
   );

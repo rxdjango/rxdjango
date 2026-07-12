@@ -14,4 +14,5 @@ authorization
 authorization_meta
 simple_model
 nested_model
+reactive_model
 ```

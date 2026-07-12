@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import deque
 from typing import Any
 
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -11,12 +12,28 @@ from .exceptions import ForbiddenError, InvalidMessageReceived
 
 PROTOCOL_VERSION = '0.1.0'
 
+# Reactive broadcast group prefix. Kept in sync with
+# rxdjango_model.reactive_registry.GROUP_PREFIX; core declares its own copy so
+# it carries no dependency on the model package.
+_GROUP_PREFIX = 'rx.'
+
+
+def _group_name(instance_type: str, instance_id: Any) -> str:
+    return f'{_GROUP_PREFIX}{instance_type}.{instance_id}'
+
 
 class ContextConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.channel = None
-        self._pending_rx: list[dict[str, Any]] = []
+        self._pending_rx: deque[dict[str, Any]] = deque()
+        # Reactive group bookkeeping. A consumer joins the broadcast group of
+        # every reactive instance it relays, so committed row changes are
+        # pushed back to it; see rxdjango_model.reactive_registry. The group
+        # names are computed during serialization (RxModelField.serialize) and
+        # handed to enqueue_rx, so the consumer never re-scans a payload.
+        self._pending_group_add: set[str] = set()
+        self._joined_groups: set[str] = set()
 
     async def connect(self) -> None:
         await self.accept()
@@ -28,6 +45,8 @@ class ContextConsumer(AsyncWebsocketConsumer):
         await self.channel.on_connect(**kwargs)
 
         await self.send_ready()
+        # Relay any state assigned during on_connect (e.g. `self.task = ...`).
+        await self._flush_rx()
 
     async def send_ready(self) -> None:
         await self.send(text_data=json.dumps({
@@ -35,16 +54,67 @@ class ContextConsumer(AsyncWebsocketConsumer):
             'protocol': PROTOCOL_VERSION,
         }))
 
-    def enqueue_rx(self, field: str, value: Any) -> None:
+    def enqueue_rx(self, field: str, value: Any, groups: list[str] | None = None) -> None:
+        """Queue an rx update for the client.
+
+        ``groups`` is the set of reactive broadcast groups the relayed payload
+        implies, precomputed by ``RxModelField.serialize``. Plain rx fields and
+        memos relay no reactive instances and pass none.
+        """
         self._pending_rx.append({'t': 'rx', 'f': field, 'v': value})
+        if groups:
+            self._pending_group_add.update(groups)
+
+    async def _apply_group_changes(self) -> None:
+        if self.channel_layer is None:
+            self._pending_group_add.clear()
+            return
+        while self._pending_group_add:
+            group = self._pending_group_add.pop()
+            if group not in self._joined_groups:
+                await self.channel_layer.group_add(group, self.channel_name)
+                self._joined_groups.add(group)
 
     async def _flush_rx(self) -> None:
-        # The outer loop drains messages enqueued while sends were awaited.
+        # Join broadcast groups before sending the snapshot so a row change
+        # committed during flush is delivered rather than dropped.
+        await self._apply_group_changes()
+        # The loop condition re-checks the deque, so messages enqueued while
+        # a send was awaited are drained too.
         while self._pending_rx:
-            batch = self._pending_rx
-            self._pending_rx = []
-            for msg in batch:
-                await self.send(text_data=json.dumps(msg))
+            msg = self._pending_rx.popleft()
+            await self.send(text_data=json.dumps(msg))
+
+    async def send_model_layer(self, field: str, layer: dict[str, Any]) -> None:
+        """Send a single flat model layer to the client immediately.
+
+        Bypasses the pending queue so callers can place a layer on the wire at
+        a precise point — used to relay an event ahead of a slower DB fetch.
+        """
+        await self.send(text_data=json.dumps({
+            't': 'rx', 'f': field, 'v': [layer],
+        }))
+
+    async def rx_broadcast(self, message: dict[str, Any]) -> None:
+        """Channel-layer handler for a reactive row change.
+
+        Routes the changed flat layer to the rx.model field it belongs to; the
+        client ``StateBuilder`` reconciles it against what it already holds by
+        comparing ``_v``.
+        """
+        payload = message['payload']
+        instance_type = payload.get('_type')
+        # Built at channel-class creation by RxModelField.contribute_to_channel.
+        field_types = getattr(type(self.channel), '_model_field_types', {})
+        field = field_types.get(instance_type)
+        if field is None:
+            return
+        if '_del' in payload and self.channel_layer is not None:
+            group = _group_name(instance_type, payload['_del'])
+            if group in self._joined_groups:
+                await self.channel_layer.group_discard(group, self.channel_name)
+                self._joined_groups.discard(group)
+        await self.send_model_layer(field, payload)
 
     async def receive(self, text_data: str | None = None, bytes_data: bytes | None = None) -> None:
         if text_data is None:
@@ -67,6 +137,10 @@ class ContextConsumer(AsyncWebsocketConsumer):
                 raise InvalidMessageReceived(f'Type "{typ}" not valid')
 
     async def disconnect(self, close_code: int | None = None) -> None:
+        if self.channel_layer is not None:
+            while self._joined_groups:
+                group = self._joined_groups.pop()
+                await self.channel_layer.group_discard(group, self.channel_name)
         if self.channel is not None:
             await self.channel.on_disconnect()
 

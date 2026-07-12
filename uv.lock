@@ -1009,6 +1009,7 @@ name = "rxdjango-dev"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "channels-redis" },
     { name = "daphne" },
     { name = "gunicorn" },
     { name = "myst-parser" },
@@ -1029,6 +1030,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "channels-redis", specifier = ">=4" },
     { name = "daphne", specifier = ">=4.1.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "myst-parser", specifier = ">=4.0.1" },

@@ -7,8 +7,9 @@ class FakeConsumer:
     def __init__(self):
         self.messages = []
 
-    def enqueue_rx(self, field, value):
+    def enqueue_rx(self, field, value, groups=None):
         self.messages.append((field, value))
+        self.groups = list(groups or [])
 
 
 @pytest.fixture

@@ -51,12 +51,15 @@ class WaitInstruction(Instruction):
         self.timeout = timeout
 
     def render(self) -> str:
+        # The condition may itself contain quotes; json.dumps produces a safely
+        # escaped JS string literal for the timeout message.
+        message = json.dumps(f'wait_for timeout: {self.condition}')
         return (
             '  {\n'
             '    const __start = Date.now();\n'
             f'    while (!({self.condition})) {{\n'
             f'      if (Date.now() - __start > {self.timeout}) '
-            f'throw new Error("wait_for timeout: {self.condition}");\n'
+            f'throw new Error({message});\n'
             '      await new Promise((r) => setTimeout(r, 10));\n'
             '    }\n'
             '  }\n'

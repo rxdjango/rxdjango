@@ -13,6 +13,16 @@
  * referenced from two relations is the same object in both, and ``state``
  * is reference-stable between updates. React rendering (``memo``,
  * ``useSyncExternalStore``) depends on this contract.
+ *
+ * Layers from reactive models carry a ``_v`` version. Because the server
+ * subscribes to the event stream before fetching the initial snapshot, a
+ * snapshot layer can arrive *after* a newer event for the same row. Indexing
+ * by arrival order would let the stale snapshot overwrite live state, so
+ * ``update`` reconciles by version: a layer is applied only if its ``_v``
+ * exceeds the high-water mark already seen for its key. Delete events
+ * (``_del``) leave a tombstone — the watermark is retained so a late snapshot
+ * of the deleted row cannot resurrect it. Layers with no ``_v`` come from
+ * non-reactive models, which emit no events, and are always applied.
  */
 
 export type RelationMap = Record<string, string>;
@@ -22,6 +32,7 @@ interface FlatInstance {
   _type: string;
   _del?: number;
   id?: number;
+  _v?: number;
   [key: string]: unknown;
 }
 
@@ -31,6 +42,7 @@ export class StateBuilder<T> {
   private index: Record<string, FlatInstance> = {};
   private built = new Map<string, Record<string, unknown>>();
   private parents = new Map<string, Set<string>>();
+  private watermark: Record<string, number> = {};
   private anchorKey: string | null = null;
 
   constructor(model: Model, anchor: string) {
@@ -40,12 +52,27 @@ export class StateBuilder<T> {
 
   update(instances: FlatInstance[]): void {
     for (const instance of instances) {
+      const id = instance.id ?? instance._del;
+      const key = id === undefined ? instance._type : `${instance._type}:${id}`;
+
+      const version = instance._v;
+      if (version !== undefined) {
+        const mark = this.watermark[key];
+        if (mark !== undefined && version <= mark) {
+          // Stale snapshot layer or already-seen event — discard.
+          continue;
+        }
+        this.watermark[key] = version;
+      }
+
       if (instance._del !== undefined) {
-        this.remove(`${instance._type}:${instance._del}`);
+        // Tombstone: `remove` drops the row and detaches it from parents,
+        // while its watermark is retained so a stale snapshot arriving
+        // afterwards is discarded by the version check above.
+        this.remove(key);
         continue;
       }
-      const id = instance.id;
-      const key = id === undefined ? instance._type : `${instance._type}:${id}`;
+
       this.relink(key, this.index[key], instance);
       this.index[key] = instance;
       this.invalidate(key);

@@ -6,6 +6,7 @@ from typing import Any
 from rest_framework import serializers
 from rxdjango.rx import RxField, _propagate_to_memos
 
+from .reactive_registry import group_name, register_layer
 from .state_model import StateModel
 
 
@@ -35,9 +36,41 @@ class RxModelField(RxField):
         Building eagerly lets us catch serializer-shape errors at import time
         and lets the generated frontend emit a runtime model map without
         re-introspecting at request time.
+
+        This hook does three compile-time jobs, each of which would otherwise
+        cost per-connection or per-message work:
+
+        * builds the ``StateModel`` once,
+        * extends ``channel_cls._model_field_types``, the ``instance_type`` →
+          field-name map the consumer uses to route a group broadcast back to
+          the right rx.model field,
+        * registers every ``StateModel`` layer backed by a ``ReactiveModel`` so
+          that model's write path knows which broadcast groups a row change
+          reaches, and marks the layer ``reactive`` so serialization can emit
+          its group names directly.
+
+        ``ContextChannelMeta`` invokes this for every channel, so both the
+        field-type map and the reactive index are complete once all channel
+        modules are imported.
         """
         if self.state_model is None:
             self.state_model = StateModel(self.serializer, many=self.many)
+
+        # Per-class map, never inherited from a base channel.
+        field_types = channel_cls.__dict__.get('_model_field_types')
+        if field_types is None:
+            field_types = {}
+            channel_cls._model_field_types = field_types
+        for instance_type in self.state_model.index:
+            field_types[instance_type] = field_name
+
+        # Imported lazily: ReactiveModel is a Django model and cannot be
+        # imported while app modules are still loading.
+        from .reactive_model import ReactiveModel
+        for layer in self.state_model.models():
+            if isinstance(layer.model, type) and issubclass(layer.model, ReactiveModel):
+                layer.reactive = True
+                register_layer(layer)
 
     def __get__(self, obj, objtype=None):
         if obj is None:
@@ -49,26 +82,36 @@ class RxModelField(RxField):
         obj.__dict__[self.name] = value
         consumer = getattr(obj, '_consumer', None)
         if consumer is not None:
-            consumer.enqueue_rx(self.name, self.serialize(value))
+            serialized, groups = self.serialize(value)
+            consumer.enqueue_rx(self.name, serialized, groups)
         if old != value:
             _propagate_to_memos(obj, self.name)
 
-    def serialize(self, value: Any) -> Any:
-        """Flatten ``value`` into a list of per-layer dicts.
+    def serialize(self, value: Any) -> tuple[Any, list[str]]:
+        """Flatten ``value`` into a list of per-layer dicts plus its groups.
 
         Each dict carries a ``_type`` marker that lets the frontend
-        ``StateBuilder`` rebuild the nested structure.
+        ``StateBuilder`` rebuild the nested structure. The second element is
+        the broadcast groups the consumer must join — one per reactive
+        instance in the payload, collected during the same walk that builds
+        the flat list, so no extra pass over the data is needed.
         """
         if value is None:
-            return None
+            return None, []
         if self.state_model is None:
             # Channel class wasn't built through the metaclass (e.g. raw
             # use in tests). Build lazily.
             self.state_model = StateModel(self.serializer, many=self.many)
         flat: list[dict[str, Any]] = []
-        for layer in self.state_model.serialize_state(value):
+        groups: list[str] = []
+        for node, layer in self.state_model.serialize_state(value):
             flat.extend(layer)
-        return _plain(flat)
+            if node.reactive:
+                for item in layer:
+                    instance_id = item.get('id')
+                    if instance_id is not None:
+                        groups.append(group_name(node.instance_type, instance_id))
+        return _plain(flat), groups
 
     def __repr__(self):
         return f'rx.model({self.serializer!r})'

@@ -39,5 +39,7 @@ a row to the index below in the same PR.
 | 0010 | [`rx.model(serializer)` reactive nested-state fields](0010-rx-model-reactive-nested-state.md) | 2026-05-15 | Active |
 | 0011 | [Reactive model support as per-backend packages on a plugin-extensible core](0011-per-backend-model-packages-and-codegen-hooks.md) | 2026-05-15 | Active |
 | 0012 | [Flat-layer wire protocol for `rx.model` nested state](0012-flat-layer-wire-protocol.md) | 2026-05-15 | Active |
+| 0013 | [Use a `ReactiveModel` base class to weld per-row versions to writes](0013-reactive-model-base-class.md) | 2026-05-14 | Active |
+| 0014 | [Client-side version watermarks for layer consistency](0014-client-side-version-watermarks.md) | 2026-05-15 | Active |
 
 Status is `Active` by default. Use `Superseded by ADR-NNNN` when replaced.

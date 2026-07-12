@@ -32,7 +32,7 @@ pytestmark = pytest.mark.django_db
 def build_contract(state_model, instance):
     payload = [
         entry
-        for layer in state_model.serialize_state(instance)
+        for _node, layer in state_model.serialize_state(instance)
         for entry in layer
     ]
     # What StateBuilder must rebuild is exactly the nested serializer output.
