@@ -1,0 +1,160 @@
+{
+  "anchor": "testapp.serializers.CompanySerializer",
+  "expected": {
+    "id": 1,
+    "name": "ACME",
+    "teams": [
+      {
+        "employees": [
+          {
+            "badge": {
+              "code": "A-1",
+              "id": 1
+            },
+            "id": 1,
+            "name": "Alice",
+            "skills": [
+              {
+                "id": 1,
+                "name": "Python"
+              },
+              {
+                "id": 2,
+                "name": "TypeScript"
+              }
+            ]
+          },
+          {
+            "badge": {
+              "code": "B-1",
+              "id": 2
+            },
+            "id": 2,
+            "name": "Bob",
+            "skills": [
+              {
+                "id": 1,
+                "name": "Python"
+              }
+            ]
+          }
+        ],
+        "id": 1,
+        "name": "Platform"
+      },
+      {
+        "employees": [
+          {
+            "badge": {
+              "code": "C-1",
+              "id": 3
+            },
+            "id": 3,
+            "name": "Carol",
+            "skills": []
+          }
+        ],
+        "id": 2,
+        "name": "Design"
+      }
+    ]
+  },
+  "model": {
+    "testapp.serializers.BadgeSerializer": {},
+    "testapp.serializers.CompanySerializer": {
+      "teams": "testapp.serializers.TeamSerializer"
+    },
+    "testapp.serializers.EmployeeSerializer": {
+      "badge": "testapp.serializers.BadgeSerializer",
+      "skills": "testapp.serializers.SkillSerializer"
+    },
+    "testapp.serializers.SkillSerializer": {},
+    "testapp.serializers.TeamSerializer": {
+      "employees": "testapp.serializers.EmployeeSerializer"
+    }
+  },
+  "payload": [
+    {
+      "_type": "testapp.serializers.CompanySerializer",
+      "id": 1,
+      "name": "ACME",
+      "teams": [
+        1,
+        2
+      ]
+    },
+    {
+      "_type": "testapp.serializers.TeamSerializer",
+      "employees": [
+        1,
+        2
+      ],
+      "id": 1,
+      "name": "Platform"
+    },
+    {
+      "_type": "testapp.serializers.TeamSerializer",
+      "employees": [
+        3
+      ],
+      "id": 2,
+      "name": "Design"
+    },
+    {
+      "_type": "testapp.serializers.EmployeeSerializer",
+      "badge": 1,
+      "id": 1,
+      "name": "Alice",
+      "skills": [
+        1,
+        2
+      ]
+    },
+    {
+      "_type": "testapp.serializers.EmployeeSerializer",
+      "badge": 2,
+      "id": 2,
+      "name": "Bob",
+      "skills": [
+        1
+      ]
+    },
+    {
+      "_type": "testapp.serializers.SkillSerializer",
+      "id": 1,
+      "name": "Python"
+    },
+    {
+      "_type": "testapp.serializers.SkillSerializer",
+      "id": 2,
+      "name": "TypeScript"
+    },
+    {
+      "_type": "testapp.serializers.SkillSerializer",
+      "id": 1,
+      "name": "Python"
+    },
+    {
+      "_type": "testapp.serializers.BadgeSerializer",
+      "code": "A-1",
+      "id": 1
+    },
+    {
+      "_type": "testapp.serializers.BadgeSerializer",
+      "code": "B-1",
+      "id": 2
+    },
+    {
+      "_type": "testapp.serializers.EmployeeSerializer",
+      "badge": 3,
+      "id": 3,
+      "name": "Carol",
+      "skills": []
+    },
+    {
+      "_type": "testapp.serializers.BadgeSerializer",
+      "code": "C-1",
+      "id": 3
+    }
+  ]
+}

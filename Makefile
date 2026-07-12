@@ -26,7 +26,7 @@ EXAMPLES_OUT  = $(SITE_BUILD)/react
 
 .DEFAULT_GOAL := help
 
-.PHONY: help extract react-package docs examples site dev check clean deploy
+.PHONY: help extract react-package docs examples site dev check test clean deploy
 
 help:
 	@echo "Targets:"
@@ -37,6 +37,7 @@ help:
 	@echo "  make site      Build docs + examples and stitch into $(SITE_BUILD)"
 	@echo "  make dev       Live-reload dev: sphinx-autobuild + react dev server"
 	@echo "  make check     Run docgen + tsc --noEmit on the frontend"
+	@echo "  make test      Run the package unit suites (pytest + vitest)"
 	@echo "  make clean     Remove all build artifacts"
 	@echo "  make deploy    Build site then restart the gunicorn backend"
 
@@ -73,6 +74,10 @@ dev: extract react-package
 
 check: extract react-package
 	@$(FRONTEND)/node_modules/.bin/tsc -p $(FRONTEND) --noEmit
+
+test:
+	$(UVRUN) pytest
+	cd $(REACT_PACKAGE) && $(NPM) test
 
 deploy: site
 	@if [ -f $(PID_FILE) ]; then \

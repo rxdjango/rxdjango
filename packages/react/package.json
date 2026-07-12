@@ -39,14 +39,17 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "react": "^18.2.0 || ^19.0.0"
   },
   "devDependencies": {
+    "@types/node": "^26.1.1",
     "@types/react": "^18.3.0",
     "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.10"
   }
 }

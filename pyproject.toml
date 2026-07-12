@@ -15,6 +15,28 @@ dependencies = [
     "daphne>=4.1.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "pytest-asyncio>=1.3",
+    "pytest-django>=4.12",
+]
+
 [tool.uv.sources]
 rxdjango = { path = "packages/core", editable = true }
 rxdjango-model = { path = "packages/model", editable = true }
+
+[tool.pytest.ini_options]
+# Unit suites live inside the packages they test. The example apps and the
+# v0.0.x reference checkout are excluded: those run under `manage.py test`
+# (see AGENTS.md), not pytest.
+testpaths = [
+    "packages/core/tests",
+    "packages/model/tests",
+]
+# Django configures once per process, so the combined run uses a single
+# settings module (the superset). Core's independence from DRF is enforced
+# by packages/core/tests/test_no_drf_import.py instead.
+pythonpath = ["packages/model/tests"]
+DJANGO_SETTINGS_MODULE = "model_settings"
+asyncio_mode = "auto"
