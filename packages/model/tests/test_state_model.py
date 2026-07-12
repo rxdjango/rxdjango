@@ -113,3 +113,29 @@ def test_prefetched_tree_serializes_with_zero_queries(prefetched_company, django
     sm = StateModel(CompanySerializer())
     with django_assert_num_queries(0):
         flatten(sm, prefetched_company)
+
+
+def test_serialize_does_not_instantiate_serializers(prefetched_company, monkeypatch):
+    """All DRF field binding happens at class-creation time.
+
+    Instantiating a DRF serializer deep-copies every declared field, so a
+    per-save instantiation puts the compile-time burden back on the save
+    path (~25x slower). Serialization must reuse pre-built instances.
+    """
+    sm = StateModel(CompanySerializer())
+
+    instantiations = []
+    for nodes in sm.index.values():
+        for node in nodes:
+            orig_init = node.flat_serializer.__init__
+
+            def counting_init(self, *args, _orig=orig_init, **kwargs):
+                instantiations.append(type(self).__name__)
+                _orig(self, *args, **kwargs)
+
+            monkeypatch.setattr(node.flat_serializer, '__init__', counting_init)
+
+    flatten(sm, prefetched_company)
+    sm.serialize_instance(prefetched_company)
+
+    assert instantiations == []

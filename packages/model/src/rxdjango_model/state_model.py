@@ -49,6 +49,12 @@ class StateModel:
         self.index[self.instance_type].append(self)
 
         self.flat_serializer, fields = self._disassemble_nested()
+        # One bound instance is reused for every serialization: DRF
+        # re-deepcopies all declared fields on each instantiation, so
+        # creating a serializer per save is ~25x slower than calling
+        # to_representation() on this shared, already-bound instance.
+        self._flat_instance = self.flat_serializer()
+        self._flat_instance.fields  # bind fields now, not on first save
 
         self.children: dict[str, StateModel] = {}
         for field_name, serializer in fields.items():
@@ -88,7 +94,7 @@ class StateModel:
         return frontend
 
     def serialize_instance(self, instance: Model) -> dict[str, Any]:
-        data = dict(self.flat_serializer(instance).data)
+        data = dict(self._flat_instance.to_representation(instance))
         data['_type'] = self.instance_type
         return data
 
@@ -108,10 +114,10 @@ class StateModel:
         if self.many:
             queryset = instance.all() if hasattr(instance, 'all') else instance
             instances = list(queryset)
-            data = [dict(self.flat_serializer(item).data) for item in instances]
         else:
             instances = [instance]
-            data = [dict(self.flat_serializer(instance).data)]
+
+        data = [dict(self._flat_instance.to_representation(item)) for item in instances]
 
         for serialized in data:
             serialized['_type'] = self.instance_type
