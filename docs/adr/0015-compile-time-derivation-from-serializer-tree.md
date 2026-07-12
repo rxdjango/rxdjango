@@ -11,8 +11,8 @@ growing amount of framework machinery is *derivable* from that tree: the flat
 per-layer serializers, the frontend relation map, the `instance_type` →
 field-name routing map the consumer uses to route broadcasts, the reactive
 broadcast groups a row change must reach, and — prospectively — the batched
-query plan for initial-state delivery (see the layered-state-delivery draft:
-"the StateModel tree *is* the prefetch plan").
+query plan for initial-state delivery (the StateModel tree *is* the
+prefetch plan).
 
 The intention, held since v0.0.x and throughout the rebuild, has always been
 that all of this is computed **once, at class-creation (import) time**. That
@@ -131,8 +131,6 @@ to exist at the level where new work looks for constraints.
 
 - ADR-0010, ADR-0011, ADR-0012 — the `rx.model` / flat-layer architecture
   this rule governs.
-- `docs/drafts/adr-layered-state-delivery.md` — the query plan as a
-  compile-time artifact of the same tree.
 - Commits `1a2418c` (shared pre-bound flat serializer), `dba37b8` (skip
   serialization when unbound), `2863e8a` (group/index derivation moved to
   compile time).
