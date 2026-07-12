@@ -47,10 +47,9 @@ class RxModelField(RxField):
     def __set__(self, obj, value):
         old = obj.__dict__.get(self.name, self.default)
         obj.__dict__[self.name] = value
-        serialized = self.serialize(value)
         consumer = getattr(obj, '_consumer', None)
         if consumer is not None:
-            consumer.enqueue_rx(self.name, serialized)
+            consumer.enqueue_rx(self.name, self.serialize(value))
         if old != value:
             _propagate_to_memos(obj, self.name)
 

@@ -63,3 +63,18 @@ def test_assigning_none_enqueues_none(prefetched_company, fake_consumer):
     ch.company = None
     assert fake_consumer.messages[-1] == ('company', None)
     assert ch.company is None
+
+
+@pytest.mark.django_db
+def test_assignment_without_consumer_skips_serialization(prefetched_company, monkeypatch):
+    """With nobody to deliver to, assignment must not pay the serialization
+    cost (it is the dominant per-save runtime burden)."""
+    ch = Channel()
+    calls = []
+    field = Channel._rx_fields['company']
+    monkeypatch.setattr(field, 'serialize', lambda value: calls.append(value))
+
+    ch.company = prefetched_company
+
+    assert ch.company is prefetched_company
+    assert calls == []
