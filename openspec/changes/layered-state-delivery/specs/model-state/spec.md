@@ -18,7 +18,7 @@ The framework SHALL walk the serializer tree once when the channel class is crea
 
 ### Requirement: Assignment sends flat, type-tagged layers
 
-Assigning a model instance (or queryset, for list fields) to an `rx.model` field SHALL execute the compiled query plan breadth-first and send one `rx` frame per completed layer, in layer order, so an instance's frame is always preceded by the frame of every parent referencing it. Each frame's `v` is a flat array of layer dicts carrying serializer output plus `_type`; nested serializer fields are replaced by primary-key references; rows of a reactive model additionally carry `_v`. Frames for the same field are merge frames: the client merges them into the field's accumulated flat state per instance, reconciled by `_v` watermark, rather than replacing the field value wholesale.
+Assigning a model instance (or queryset, for list fields) to an `rx.model` field SHALL execute the compiled query plan breadth-first and send one `rx` frame per completed layer, in layer order, so an instance's frame is always preceded by the frame of every parent referencing it. Each frame's `v` is a flat array of layer dicts carrying serializer output plus `_type`; nested serializer fields are replaced by primary-key references; rows of a reactive model additionally carry `_v`. Frames for the same field are merge frames: the client merges them into the field's accumulated flat state per instance, reconciled by `_v` watermark, rather than replacing the field value wholesale. Assigning a field again before a prior assignment's layers have been delivered SHALL supersede the prior walk: no further frames from the superseded assignment are sent.
 
 #### Scenario: Task with its project travels as two frames
 
@@ -31,6 +31,25 @@ Assigning a model instance (or queryset, for list fields) to an `rx.model` field
 
 - **WHEN** a project with many tasks and comments is assigned
 - **THEN** the anchor project frame is enqueued as soon as its layer completes, before comment rows are queried
+
+#### Scenario: Reassignment supersedes a pending walk
+
+- **WHEN** `on_connect` assigns task `a` to the `task` field and then assigns task `b` before `a`'s layers have been delivered
+- **THEN** the client receives only `b`'s layer frames for `task`; no frame from `a`'s walk is sent
+
+### Requirement: Clearing a model field
+
+Assigning `None` to an `rx.model` field SHALL send an `rx` frame with `v: null`; the client resets its rebuild state for the field and exposes `null`. Clearing SHALL supersede any pending walk for the field: no layer frame from a prior assignment is sent after the `v: null` frame.
+
+#### Scenario: Field cleared
+
+- **WHEN** channel code assigns `self.task = None`
+- **THEN** the client's `channel.task` becomes `null` and previously held layers are forgotten
+
+#### Scenario: Clearing mid-delivery sends no stale layers
+
+- **WHEN** a task is assigned and the field is cleared before the assignment's layers have been delivered
+- **THEN** the client receives no layer frame for the field after the `v: null` frame
 
 ### Requirement: The client rebuilds the nested shape
 

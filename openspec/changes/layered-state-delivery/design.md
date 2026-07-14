@@ -1,6 +1,6 @@
 ## Context
 
-ADR-0016 decided the delivery architecture; this design maps it onto the code. Today `StateModel.serialize_state()` (`packages/model/src/rxdjango_model/state_model.py`) walks instance attributes lazily (O(rows) queries, duplicate refetches), `RxModelField.serialize()` (`packages/model/src/rxdjango_model/fields.py`) exhausts the generator into one monolithic frame, and the sync ORM runs inside the async consumer. The client (`packages/react/src/StateBuilder.ts`) already has memoized identity semantics, a parents map (`e017d66`), and ADR-0014 watermark reconciliation (`fee4e1b`); unresolved references currently rebuild as `null`.
+ADR-0016 decided the delivery architecture; this design maps it onto the code. Today `StateModel.serialize_state()` (`packages/model/src/rxdjango_model/state_model.py`) walks instance attributes lazily (O(rows) queries, duplicate refetches), `RxModelField.serialize()` (`packages/model/src/rxdjango_model/fields.py`) exhausts the generator into one monolithic frame, and the sync ORM runs inside the async consumer. The consumer (`packages/core/src/rxdjango/consumers.py`) already has a sync-deposit/async-drain seam: descriptor `__set__`s call the sync `enqueue_rx`, and the async `_flush_rx` drains `_pending_rx`/`_pending_group_add` after `on_connect` and after each action. The client (`packages/react/src/StateBuilder.ts`) already has memoized identity semantics, a parents map (`e017d66`), and ADR-0014 watermark reconciliation (`fee4e1b`); unresolved references currently rebuild as `null`.
 
 Constraints inherited from the ADRs: the wire envelope is untouched (ADR-0002/0012); everything derivable from the serializer tree is compiled at class creation (ADR-0015); frames reconcile via DB-minted `_v` and client watermarks (ADR-0013/0014); no `select_related` folding — layers keep a resolver-agnostic shape (pk set per instance type) so the future per-instance cache can slot in as a layer resolver (ADR-0016 decisions 1 and 4).
 
@@ -34,7 +34,7 @@ At class creation (extending the existing tree compilation in `state_model.py`),
 
 ### D3. Per-layer flush replaces accumulate-everything
 
-`RxModelField.serialize()` stops exhausting the generator. Assignment iterates the async generator and enqueues one `rx` frame per yielded layer (same envelope, `v` = flat array of that layer's dicts). Ordering is guaranteed by construction: a layer is only discovered from its parent's output, and frames are enqueued in yield order on the same connection queue. Assigning `None` keeps today's single `v: null` frame.
+`RxModelField.serialize()` stops exhausting the generator. One `rx` frame goes out per yielded layer (same envelope, `v` = flat array of that layer's dicts), delivered through the bridge in D7. Ordering is guaranteed by construction: a layer is only discovered from its parent's output, and frames are sent in yield order on the same connection. Assigning `None` keeps today's single `v: null` frame.
 
 *Test fallout accepted:* backend protocol/integration tests that assert "one frame with N layer dicts" must be updated to assert the layered sequence — that is the specified behavior changing, not collateral damage. The e2e suite (final rendered state) should pass unchanged.
 
@@ -48,9 +48,18 @@ ADR-0016 left the exact union shape to implementation (within ADR-0011's hooks).
 
 *Why the flag on both sides of the union (vs. `_loaded` only on the stub):* `x._loaded` is a proper TS discriminant, so `if (x._loaded)` narrows both branches with no `in`-operator idiom and no cast — the honest-types north star. The cost (a synthetic field on every built instance) is client-local.
 
-### D6. Sequencing: two shots, backend first
+### D6. The sync/async bridge: `__set__` deposits a pending walk, the consumer drains it
 
-Shot 1 (backend: D1–D3) is wire-compatible — same flat instances in more, smaller frames — so the existing Django suite validates it with only the frame-count/protocol assertions updated and zero frontend changes (a `null`-rebuilding client still converges once all layers land). Shot 2 (client + codegen: D4–D5) then changes what partial state looks like, pinned by the ported v0 tests.
+`RxModelField.__set__` is a descriptor dunder — Python's attribute protocol calls it synchronously, so it can never `await` the async generator, and `async_to_sync` refuses to run on a thread with a running event loop (which is exactly where `__set__` executes). The awaiting must therefore live in the consumer. Decision: extend the existing deposit/drain seam. `__set__` stays sync and deposits the field's pending layer walk (the not-yet-started async generator) into a consumer-side map **keyed by field name**; `_flush_rx` drains pending walks by async-iterating each one, applying that layer's group joins before sending that layer's frame, then draining `_pending_rx` as today.
+
+- **Supersession for free:** reassigning a field (including `None`) before its walk has drained replaces the map entry, so a superseded walk sends no frames — no stale layers can land after a newer assignment's frames or after the `v: null` clear.
+- **Per-layer group joins:** the "join broadcast groups before sending the snapshot" invariant (`_flush_rx`'s existing ordering) is preserved per layer — each layer's implied groups are applied before that layer's frame goes out, so a row committed mid-walk is pushed, not dropped.
+
+*Why not an eager `asyncio.Task` per assignment:* it starts queries marginally earlier but opens a race class — two concurrent walks for the same field interleaving frames — that then needs cancel-on-reassign bookkeeping to close. The deposit map gets the same guarantee structurally. *Why not `await self.set_task(...)`:* it changes the public assignment surface the spec scenarios and ADR-0010 ergonomics are built on. *Why not keep the walk sync:* it forfeits ADR-0016's off-loop requirement, which the spec delta states normatively.
+
+### D7. Sequencing: two shots, backend first
+
+Shot 1 (backend: D1–D3, D6) is wire-compatible — same flat instances in more, smaller frames — so the existing Django suite validates it with only the frame-count/protocol assertions updated and zero frontend changes (a `null`-rebuilding client still converges once all layers land). Shot 2 (client + codegen: D4–D5) then changes what partial state looks like, pinned by the ported v0 tests.
 
 ## Risks / Trade-offs
 
@@ -62,7 +71,7 @@ Shot 1 (backend: D1–D3) is wire-compatible — same flat instances in more, sm
 
 ## Migration Plan
 
-No deployment migration: single repo, no published consumers. Land as two PR-sized shots (D6). Shot 1 leaves the frontend untouched and green; Shot 2 regenerates the example SDK (`makefrontend`) and updates example components in the same commit, so the repo never holds a half-migrated state.
+No deployment migration: single repo, no published consumers. Land as two PR-sized shots (D7). Shot 1 leaves the frontend untouched and green; Shot 2 regenerates the example SDK (`makefrontend`) and updates example components in the same commit, so the repo never holds a half-migrated state.
 
 ## Open Questions
 

@@ -5,7 +5,7 @@ Initial-state delivery for `rx.model` fields is currently the worst of three wor
 ## What Changes
 
 - Replace the lazy attribute walk in `StateModel.serialize_state()` with a pk-first, breadth-first layered walk: one `pk__in` query per instance type per layer, query count O(edges in the serializer tree). The query plan is compiled at class creation (ADR-0015). No `select_related` folding — every edge, to-one and to-many, resolves as a pk set (ADR-0016 decision 1).
-- Run layer queries off the event loop (`sync_to_async` / thread executor) instead of blocking the consumer.
+- Run layer queries off the event loop (`sync_to_async` / thread executor) instead of blocking the consumer. Because descriptor `__set__` is synchronous, assignment deposits a pending layer walk on the consumer (keyed by field), and the consumer's existing flush path drains it — reassigning or clearing a field before its walk drains supersedes the pending walk, so no stale layers are delivered.
 - **BREAKING (behavioral, not wire-format):** flush each completed layer immediately as its own `rx` frame. "One field payload = one complete frame" is dead; frames are merge frames reconciled by ADR-0014 watermarks. The wire envelope itself is unchanged.
 - Client-side: `StateBuilder` materializes `{ id, _loaded: false }` typed stubs for referenced-but-not-yet-arrived instances (v0 semantics), replaced on arrival with reference-change propagation. Stubs are constructed from parent pk lists; the server never sends a stub.
 - Codegen: generated relation types become a discriminated union on `_loaded`, emitted through the `rxdjango_model` codegen hooks (ADR-0011).
@@ -21,13 +21,14 @@ None — this change reshapes how existing model-state delivery behaves; no new 
 
 ### Modified Capabilities
 
-- `model-state`: "Assignment sends flat, type-tagged layers" changes from a single frame to per-layer frames delivered progressively, parent-before-child, produced by the layered `pk__in` walk off the event loop; "The client rebuilds the nested shape" changes unresolved references from `null` to `{ id, _loaded: false }` stubs; stub replacement composes with reference stability and watermarks.
+- `model-state`: "Assignment sends flat, type-tagged layers" changes from a single frame to per-layer frames delivered progressively, parent-before-child, produced by the layered `pk__in` walk off the event loop; "The client rebuilds the nested shape" changes unresolved references from `null` to `{ id, _loaded: false }` stubs; stub replacement composes with reference stability and watermarks; "Clearing a model field" gains supersession — a pending walk is dropped when its field is reassigned or cleared.
 - `frontend-codegen`: "Typed model interfaces per app" changes — relation types are emitted as a `_loaded` discriminated union so partial state is honest in the generated types.
 
 ## Impact
 
 - `packages/model/src/rxdjango_model/state_model.py` — lazy walk replaced by compiled query plan + layered execution.
-- `packages/model/src/rxdjango_model/fields.py` — `RxModelField.serialize()` accumulate-everything removed; per-layer enqueue.
+- `packages/model/src/rxdjango_model/fields.py` — `RxModelField.serialize()` accumulate-everything removed; `__set__` deposits the pending layer walk.
+- `packages/core/src/rxdjango/consumers.py` — `_flush_rx` drains pending walks: per-layer group joins, per-layer frame sends, supersession on reassign/clear.
 - `packages/react/src/StateBuilder.ts` — stub materialization; index accepts partial state.
 - `rxdjango_model` TS codegen hooks — `_loaded` union in generated model interfaces.
 - Existing suites: the backend Django suite (integration/protocol/makefrontend/e2e) validates wire compatibility of the backend half with zero frontend edits expected; `packages/react/src/StateBuilder.test.ts` gains stub/arrival-order scenarios ported from v0.

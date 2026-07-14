@@ -4,14 +4,16 @@
 - [ ] 1.2 Handle plan edge cases: same type at multiple depths (shallowest rank wins, late-discovered pks fetch where discovered), cycle termination via already-fetched `_type:pk` dedup
 - [ ] 1.3 Unit-cover the plan in the backend suite: layer order, edges, and dedup for a nested fixture (project → tasks → users/comments), asserted at import/class-creation time
 
-## 2. Backend: layered walk and per-layer flush (design D2, D3)
+## 2. Backend: layered walk, deposit/drain bridge, per-layer flush (design D2, D3, D6)
 
 - [ ] 2.1 Rewrite `serialize_state` as an async generator: per rank, run `pk__in` queries + serialization in one `sync_to_async` hop, yield the completed layer
 - [ ] 2.2 Collect and deduplicate next-rank pk sets from the yielded layer's serialized relation fields; drop already-fetched `_type:pk` keys
-- [ ] 2.3 Replace `RxModelField.serialize()` accumulate-everything in `packages/model/src/rxdjango_model/fields.py`: iterate the async generator, enqueue one `rx` frame per layer; keep `None` assignment as a single `v: null` frame
-- [ ] 2.4 Update protocol/integration assertions that expect one monolithic frame to expect the layered frame sequence (parent-before-child)
-- [ ] 2.5 Add query-count assertions: O(edges) queries for the nested fixture regardless of row count; shared child (fan-in) fetched once; no `select_related` in the walk
-- [ ] 2.6 Run the full backend suite (`cd examples/backend && uv run ./manage.py test`) — e2e must pass with the frontend untouched (wire-compatible shot 1)
+- [ ] 2.3 Replace `RxModelField.serialize()` accumulate-everything in `packages/model/src/rxdjango_model/fields.py`: `__set__` stays sync and deposits the field's pending layer walk on the consumer, keyed by field name (replacing any undrained walk for that field); `None` assignment supersedes likewise and yields a single `v: null` frame
+- [ ] 2.4 Drain pending walks in `_flush_rx` (`packages/core/src/rxdjango/consumers.py`): async-iterate each walk, applying that layer's group joins before sending that layer's frame, then drain `_pending_rx` as today
+- [ ] 2.5 Update protocol/integration assertions that expect one monolithic frame to expect the layered frame sequence (parent-before-child)
+- [ ] 2.6 Add query-count assertions: O(edges) queries for the nested fixture regardless of row count; shared child (fan-in) fetched once; no `select_related` in the walk
+- [ ] 2.7 Add supersession tests (reassign before drain → only the newer walk's frames; clear before drain → no layer frame after `v: null`) and per-layer group-join coverage (a row committed after its layer was delivered is pushed, not dropped)
+- [ ] 2.8 Run the full backend suite (`cd examples/backend && uv run ./manage.py test`) — e2e must pass with the frontend untouched (wire-compatible shot 1)
 
 ## 3. Client: stub materialization (design D4)
 
