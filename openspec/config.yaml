@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  RxDjango: a semantics-first rebuild of a Django+React reactive-state
+  framework. A server-side ContextChannel declaration is the contract: reactive
+  state is declared with DRF serializers, and a typed React SDK is generated
+  from it.
+
+  Tech stack: Python 3.12 / Django / DRF / Django Channels. Monorepo:
+  packages/core (rxdjango), packages/model (rxdjango_model, the reactive-model
+  backend package), packages/react (@rxdjango/react, TypeScript), with runnable
+  example apps in examples/backend + examples/frontend.
+
+  Conventions:
+  - Main specs (openspec/specs/) document IMPLEMENTED behavior only — the
+    as-built baseline. Target-spec / aspirational material lives in
+    docs/rxdjango-spec.md; its grants, @consumer, and caching/reconnection
+    sections are NOT built yet and enter openspec only via future changes.
+  - Architectural decisions: docs/adr/ (accepted ADRs, index in
+    docs/adr/README.md). Draft designs: docs/drafts/ and docs/rfcs/.
+  - Known doc inconsistencies are tracked in docs/issues.md. Where docs and
+    code diverge, specs follow the code.
+  - The wire envelope is contract (ADR-0002); everything derivable from the
+    serializer tree is computed at class-creation time (ADR-0015).
+
+  Verification: cd examples/backend && uv run ./manage.py test
+  (integration, protocol, makefrontend, and e2e suites; needs npm/node on
+  PATH and a Playwright chromium install). TS client tests live in
+  packages/react/src/*.test.ts.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
