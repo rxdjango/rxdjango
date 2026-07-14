@@ -1,7 +1,8 @@
 """Protocol-level test for the reactive_model channel.
 
-Verifies that the rx update for the ``task`` field carries the flat
-``[Task, Project]`` layer pair produced by the backend ``StateModel``.
+Verifies that the rx update for the ``task`` field arrives as two layered
+frames -- one per instance type, parent-before-child (ADR-0016) -- rather
+than a single frame carrying both the ``Task`` and ``Project`` layers.
 """
 
 from __future__ import annotations
@@ -38,18 +39,20 @@ class ReactiveModelProtocolTests(RxProtocolTestCase):
             and entry['data'].get('t') == 'rx'
             and entry['data'].get('f') == 'task'
         ]
-        self.assertEqual(len(rx_frames), 1)
-        payload = rx_frames[0]['data']['v']
+        # One frame per layer, parent-before-child: the task frame precedes
+        # the project frame it references.
+        self.assertEqual(len(rx_frames), 2)
+        task_frame, project_frame = [frame['data']['v'] for frame in rx_frames]
 
-        self.assertIsInstance(payload, list)
-        self.assertEqual(len(payload), 2)
+        self.assertIsInstance(task_frame, list)
+        self.assertEqual(len(task_frame), 1)
+        self.assertIsInstance(project_frame, list)
+        self.assertEqual(len(project_frame), 1)
 
-        by_type = {entry['_type']: entry for entry in payload}
-        self.assertIn('reactive_model.serializers.TaskSerializer', by_type)
-        self.assertIn('reactive_model.serializers.ProjectSerializer', by_type)
-
-        task_layer = by_type['reactive_model.serializers.TaskSerializer']
-        project_layer = by_type['reactive_model.serializers.ProjectSerializer']
+        task_layer = task_frame[0]
+        project_layer = project_frame[0]
+        self.assertEqual(task_layer['_type'], 'reactive_model.serializers.TaskSerializer')
+        self.assertEqual(project_layer['_type'], 'reactive_model.serializers.ProjectSerializer')
         self.assertEqual(task_layer['name'], 'First Task')
         self.assertEqual(task_layer['project'], project_layer['id'])
         self.assertEqual(project_layer['name'], 'My Project')

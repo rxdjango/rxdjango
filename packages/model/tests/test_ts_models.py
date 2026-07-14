@@ -19,9 +19,10 @@ def test_interface_name_strips_serializer_suffix():
 def test_render_interface():
     assert _render_interface(EmployeeWithTeamSerializer) == [
         'export interface EmployeeWithTeam {',
+        '  _loaded: true;',
         '  id: number;',
         '  name: string;',
-        '  team: TeamName;',
+        '  team: TeamName | Unloaded;',
         '}',
     ]
 
@@ -57,3 +58,21 @@ def test_list_field_ts_type():
     assert _serializer_field_ts_type(
         serializers.ListField(child=serializers.CharField())
     ) == 'string[]'
+
+
+def test_relation_field_gets_unloaded_union():
+    assert _serializer_field_ts_type(CompanySerializer()) == 'Company | Unloaded'
+
+
+def test_nullable_relation_field_gets_unloaded_and_null_union():
+    assert _serializer_field_ts_type(
+        CompanySerializer(allow_null=True)
+    ) == 'Company | Unloaded | null'
+
+
+def test_relation_list_field_wraps_union_in_parens():
+    # `Company | Unloaded[]` would parse as `Company | (Unloaded[])`, not
+    # `(Company | Unloaded)[]` -- the union must be parenthesized before `[]`.
+    assert _serializer_field_ts_type(
+        CompanySerializer(many=True)
+    ) == '(Company | Unloaded)[]'

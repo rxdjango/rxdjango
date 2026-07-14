@@ -27,12 +27,18 @@ class ContextConsumer(AsyncWebsocketConsumer):
         super().__init__(*args, **kwargs)
         self.channel = None
         self._pending_rx: deque[dict[str, Any]] = deque()
+        # Sync-deposit/async-drain seam for rx.model fields (ADR-0016 D6):
+        # RxModelField.__set__ is a sync descriptor and cannot await the
+        # layered walk, so it deposits the field's not-yet-started walk here,
+        # keyed by field name. Reassigning the field before drain replaces
+        # the entry, superseding the prior walk for free — an undrained async
+        # generator's body never runs. `_flush_rx` drains these first.
+        self._pending_model_walks: dict[str, Any] = {}
         # Reactive group bookkeeping. A consumer joins the broadcast group of
         # every reactive instance it relays, so committed row changes are
-        # pushed back to it; see rxdjango_model.reactive_registry. The group
-        # names are computed during serialization (RxModelField.serialize) and
-        # handed to enqueue_rx, so the consumer never re-scans a payload.
-        self._pending_group_add: set[str] = set()
+        # pushed back to it; see rxdjango_model.reactive_registry. Model-field
+        # groups are joined per layer while draining a walk, immediately
+        # before that layer's frame is sent (see `_drain_model_walks`).
         self._joined_groups: set[str] = set()
 
     async def connect(self) -> None:
@@ -54,31 +60,56 @@ class ContextConsumer(AsyncWebsocketConsumer):
             'protocol': PROTOCOL_VERSION,
         }))
 
-    def enqueue_rx(self, field: str, value: Any, groups: list[str] | None = None) -> None:
-        """Queue an rx update for the client.
-
-        ``groups`` is the set of reactive broadcast groups the relayed payload
-        implies, precomputed by ``RxModelField.serialize``. Plain rx fields and
-        memos relay no reactive instances and pass none.
-        """
+    def enqueue_rx(self, field: str, value: Any) -> None:
+        """Queue a plain rx update (or a model field's ``v: null`` clear) for
+        the client. Model-field layer frames go through
+        ``deposit_model_walk`` instead, since those carry per-layer group
+        joins that must happen before each frame, not in a batch."""
         self._pending_rx.append({'t': 'rx', 'f': field, 'v': value})
-        if groups:
-            self._pending_group_add.update(groups)
 
-    async def _apply_group_changes(self) -> None:
-        if self.channel_layer is None:
-            self._pending_group_add.clear()
+    def deposit_model_walk(self, field: str, walk: Any) -> None:
+        """Deposit (or clear, via ``walk=None``) a field's pending layered
+        walk, keyed by field name (ADR-0016 D6).
+
+        Called synchronously from ``RxModelField.__set__``. Passing ``None``
+        drops any undrained walk for the field, so a clear or a reassignment
+        supersedes it — no frames from a superseded walk are ever sent.
+        """
+        if walk is None:
+            self._pending_model_walks.pop(field, None)
+        else:
+            self._pending_model_walks[field] = walk
+
+    async def _join_groups(self, groups: list[str] | None) -> None:
+        if self.channel_layer is None or not groups:
             return
-        while self._pending_group_add:
-            group = self._pending_group_add.pop()
+        for group in groups:
             if group not in self._joined_groups:
                 await self.channel_layer.group_add(group, self.channel_name)
                 self._joined_groups.add(group)
 
+    async def _drain_model_walks(self) -> None:
+        """Drain every pending model-field walk to completion, one field at a
+        time, sending each layer's frame immediately after joining that
+        layer's broadcast groups (join-before-snapshot, preserved per layer).
+
+        Popping a field's walk before iterating it means a walk deposited for
+        a field already mid-drain (impossible today — a consumer processes
+        one message at a time — but harmless either way) would simply start a
+        fresh drain rather than racing this one.
+        """
+        while self._pending_model_walks:
+            field = next(iter(self._pending_model_walks))
+            walk = self._pending_model_walks.pop(field)
+            async for value, groups in walk:
+                await self._join_groups(groups)
+                await self.send(text_data=json.dumps({'t': 'rx', 'f': field, 'v': value}))
+
     async def _flush_rx(self) -> None:
-        # Join broadcast groups before sending the snapshot so a row change
-        # committed during flush is delivered rather than dropped.
-        await self._apply_group_changes()
+        # Model-field layers first, each preceded by its own group joins
+        # (ADR-0016 D6); then plain rx values and model-field `v: null`
+        # clears, which need no group handling.
+        await self._drain_model_walks()
         # The loop condition re-checks the deque, so messages enqueued while
         # a send was awaited are drained too.
         while self._pending_rx:

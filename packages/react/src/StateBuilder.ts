@@ -28,6 +28,22 @@
 export type RelationMap = Record<string, string>;
 export type Model = Record<string, RelationMap>;
 
+/** Shared unloaded-relation shape (design D5). Generated relation types are
+ * a discriminated union `X | Unloaded` (`_loaded: true` on `X`, `false`
+ * here) so `if (x._loaded)` narrows both branches with no cast. */
+export interface Unloaded {
+  id: number;
+  _loaded: false;
+}
+
+/** `{ id, _loaded: false }` stub for a `${type}:${id}` index key with no
+ * arrived instance yet. The server never sends this shape (design D4); it is
+ * constructed purely from the pk the referencing layer already carries. */
+function makeStub(key: string): Unloaded {
+  const idPart = key.slice(key.indexOf(":") + 1);
+  return { id: Number(idPart), _loaded: false };
+}
+
 interface FlatInstance {
   _type: string;
   _del?: number;
@@ -40,7 +56,7 @@ export class StateBuilder<T> {
   private model: Model;
   private anchor: string;
   private index: Record<string, FlatInstance> = {};
-  private built = new Map<string, Record<string, unknown>>();
+  private built = new Map<string, Record<string, unknown> | Unloaded>();
   private parents = new Map<string, Set<string>>();
   private watermark: Record<string, number> = {};
   private anchorKey: string | null = null;
@@ -87,11 +103,21 @@ export class StateBuilder<T> {
     return this.rebuild(this.anchorKey) as T | null;
   }
 
-  private rebuild(key: string): Record<string, unknown> | null {
+  private rebuild(key: string): Record<string, unknown> | Unloaded | null {
     const cached = this.built.get(key);
     if (cached !== undefined) return cached;
     const instance = this.index[key];
-    if (instance === undefined) return null;
+    if (instance === undefined) {
+      // Referenced but not yet arrived: a memoized stub, not `null` (design
+      // D4 / ADR-0016 decision 3). Caching it in `built` under the same key
+      // `update()` invalidates on arrival gives it the same identity
+      // stability as a built instance, and the existing invalidate/parents
+      // propagation replaces it with the real instance for free once that
+      // arrival happens -- no separate stub-tracking needed.
+      const stub = makeStub(key);
+      this.built.set(key, stub);
+      return stub;
+    }
     const relations = this.model[instance._type] ?? {};
     const out: Record<string, unknown> = {};
     for (const [field, value] of Object.entries(instance)) {
@@ -109,6 +135,10 @@ export class StateBuilder<T> {
         out[field] = this.rebuild(`${childType}:${value}`);
       }
     }
+    // Client-side only: the server payload is unchanged (design D5). `x._loaded`
+    // is a real discriminant against the stub shape, so callers can narrow
+    // with `if (x._loaded)` and no cast.
+    out._loaded = true;
     this.built.set(key, out);
     return out;
   }

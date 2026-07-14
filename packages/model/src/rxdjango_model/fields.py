@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import AsyncGenerator, Mapping
 from typing import Any
 
 from rest_framework import serializers
@@ -82,36 +82,41 @@ class RxModelField(RxField):
         obj.__dict__[self.name] = value
         consumer = getattr(obj, '_consumer', None)
         if consumer is not None:
-            serialized, groups = self.serialize(value)
-            consumer.enqueue_rx(self.name, serialized, groups)
+            if value is None:
+                consumer.deposit_model_walk(self.name, None)
+                consumer.enqueue_rx(self.name, None)
+            else:
+                if self.state_model is None:
+                    # Channel class wasn't built through the metaclass (e.g.
+                    # raw use in tests). Build lazily.
+                    self.state_model = StateModel(self.serializer, many=self.many)
+                consumer.deposit_model_walk(self.name, self._walk_layers(value))
         if old != value:
             _propagate_to_memos(obj, self.name)
 
-    def serialize(self, value: Any) -> tuple[Any, list[str]]:
-        """Flatten ``value`` into a list of per-layer dicts plus its groups.
+    async def _walk_layers(self, value: Any) -> AsyncGenerator[tuple[Any, list[str]], None]:
+        """Bridge deposited on the consumer for it to drain (design D6).
 
-        Each dict carries a ``_type`` marker that lets the frontend
-        ``StateBuilder`` rebuild the nested structure. The second element is
-        the broadcast groups the consumer must join — one per reactive
-        instance in the payload, collected during the same walk that builds
-        the flat list, so no extra pass over the data is needed.
+        ``__set__`` is a sync descriptor and cannot await the layered walk,
+        so it hands the consumer this not-yet-started async generator instead
+        of running it. Nothing in an async generator's body executes until it
+        is first iterated, so a reassignment that replaces this deposit
+        before drain leaves the superseded generator inert — it is garbage
+        collected having sent no frames and issued no queries.
+
+        Yields one ``(plain_layer, groups)`` pair per layer: the flat,
+        JSON-safe instance list, and the reactive broadcast groups it
+        implies (one per reactive instance in the layer), so the consumer can
+        join those groups immediately before sending that layer's frame.
         """
-        if value is None:
-            return None, []
-        if self.state_model is None:
-            # Channel class wasn't built through the metaclass (e.g. raw
-            # use in tests). Build lazily.
-            self.state_model = StateModel(self.serializer, many=self.many)
-        flat: list[dict[str, Any]] = []
-        groups: list[str] = []
-        for node, layer in self.state_model.serialize_state(value):
-            flat.extend(layer)
+        async for node, layer in self.state_model.serialize_state(value):
+            groups: list[str] = []
             if node.reactive:
                 for item in layer:
                     instance_id = item.get('id')
                     if instance_id is not None:
                         groups.append(group_name(node.instance_type, instance_id))
-        return _plain(flat), groups
+            yield _plain(layer), groups
 
     def __repr__(self):
         return f'rx.model({self.serializer!r})'

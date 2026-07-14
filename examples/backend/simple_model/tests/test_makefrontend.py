@@ -37,7 +37,11 @@ class SimpleModelMakeFrontendTests(TestCase):
         with open(ts_path) as fh:
             content = fh.read()
         self.assertIn('export interface User {', content)
+        self.assertIn('  _loaded: true;', content)
         self.assertIn('  name: string;', content)
+        # No relation fields on this serializer, so the shared Unloaded type
+        # is never referenced -- codegen must not emit an unused import.
+        self.assertNotIn('Unloaded', content)
 
     def test_rx_model_serializer_is_tracked(self):
         self.assertIn(UserSerializer, tracked_serializers())

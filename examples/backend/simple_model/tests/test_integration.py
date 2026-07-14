@@ -19,5 +19,8 @@ class SimpleModelIntegrationTests(RxIntegrationTestCase):
 
         self.assertEqual(
             state,
-            {'authorized': True, 'user': {'name': 'Registered User'}},
+            {
+                'authorized': True,
+                'user': {'name': 'Registered User', '_loaded': True},
+            },
         )

@@ -120,7 +120,8 @@ describe("ContextChannel", () => {
     expect(channel.user).toEqual({
       id: 1,
       name: "Alice",
-      company: { id: 10, name: "ACME" },
+      _loaded: true,
+      company: { id: 10, name: "ACME", _loaded: true },
     });
   });
 

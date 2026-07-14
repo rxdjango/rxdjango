@@ -77,6 +77,8 @@ class NestedModelMakeFrontendTests(TestCase):
         with open(ts_path) as fh:
             content = fh.read()
 
+        self.assertIn("import type { Unloaded } from '@rxdjango/react';", content)
         self.assertIn('export interface User {', content)
         self.assertIn('export interface Company {', content)
-        self.assertIn('company: Company', content)
+        self.assertIn('  _loaded: true;', content)
+        self.assertIn('company: Company | Unloaded', content)

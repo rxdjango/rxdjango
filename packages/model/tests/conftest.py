@@ -6,10 +6,16 @@ from testapp.models import Badge, Company, Employee, Skill, Team
 class FakeConsumer:
     def __init__(self):
         self.messages = []
+        self.walks = {}
 
-    def enqueue_rx(self, field, value, groups=None):
+    def enqueue_rx(self, field, value):
         self.messages.append((field, value))
-        self.groups = list(groups or [])
+
+    def deposit_model_walk(self, field, walk):
+        if walk is None:
+            self.walks.pop(field, None)
+        else:
+            self.walks[field] = walk
 
 
 @pytest.fixture

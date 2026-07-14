@@ -1,8 +1,9 @@
 """Protocol-level test for the nested_model channel.
 
-Verifies that the rx update for the ``user`` field carries the flat
-``[User, Company]`` layer pair produced by the backend ``StateModel``,
-not the previous nested-blob form.
+Verifies that the rx update for the ``user`` field arrives as two layered
+frames -- one per instance type, parent-before-child (ADR-0016) -- rather
+than either the pre-ADR-0010 nested-blob form or a single monolithic frame
+carrying every layer at once.
 """
 
 from __future__ import annotations
@@ -36,18 +37,20 @@ class NestedModelProtocolTests(RxProtocolTestCase):
             and entry['data'].get('t') == 'rx'
             and entry['data'].get('f') == 'user'
         ]
-        self.assertEqual(len(rx_frames), 1)
-        payload = rx_frames[0]['data']['v']
+        # One frame per layer, parent-before-child: the user frame precedes
+        # the company frame it references.
+        self.assertEqual(len(rx_frames), 2)
+        user_frame, company_frame = [frame['data']['v'] for frame in rx_frames]
 
-        self.assertIsInstance(payload, list)
-        self.assertEqual(len(payload), 2)
+        self.assertIsInstance(user_frame, list)
+        self.assertEqual(len(user_frame), 1)
+        self.assertIsInstance(company_frame, list)
+        self.assertEqual(len(company_frame), 1)
 
-        by_type = {entry['_type']: entry for entry in payload}
-        self.assertIn('nested_model.serializers.UserSerializer', by_type)
-        self.assertIn('nested_model.serializers.CompanySerializer', by_type)
-
-        user_layer = by_type['nested_model.serializers.UserSerializer']
-        company_layer = by_type['nested_model.serializers.CompanySerializer']
+        user_layer = user_frame[0]
+        company_layer = company_frame[0]
+        self.assertEqual(user_layer['_type'], 'nested_model.serializers.UserSerializer')
+        self.assertEqual(company_layer['_type'], 'nested_model.serializers.CompanySerializer')
         self.assertEqual(user_layer['name'], 'Registered User')
         self.assertEqual(user_layer['company'], company_layer['id'])
         self.assertEqual(company_layer['name'], 'Lorem Ipsum Inc')

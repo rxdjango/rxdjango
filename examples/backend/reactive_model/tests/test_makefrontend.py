@@ -74,6 +74,8 @@ class ReactiveModelMakeFrontendTests(TestCase):
         with open(ts_path) as fh:
             content = fh.read()
 
+        self.assertIn("import type { Unloaded } from '@rxdjango/react';", content)
         self.assertIn('export interface Task {', content)
         self.assertIn('export interface Project {', content)
-        self.assertIn('project: Project', content)
+        self.assertIn('  _loaded: true;', content)
+        self.assertIn('project: Project | Unloaded', content)

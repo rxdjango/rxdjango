@@ -1,13 +1,17 @@
 {
   "anchor": "testapp.serializers.CompanySerializer",
   "expected": {
+    "_loaded": true,
     "id": 1,
     "name": "ACME",
     "teams": [
       {
+        "_loaded": true,
         "employees": [
           {
+            "_loaded": true,
             "badge": {
+              "_loaded": true,
               "code": "A-1",
               "id": 1
             },
@@ -15,17 +19,21 @@
             "name": "Alice",
             "skills": [
               {
+                "_loaded": true,
                 "id": 1,
                 "name": "Python"
               },
               {
+                "_loaded": true,
                 "id": 2,
                 "name": "TypeScript"
               }
             ]
           },
           {
+            "_loaded": true,
             "badge": {
+              "_loaded": true,
               "code": "B-1",
               "id": 2
             },
@@ -33,6 +41,7 @@
             "name": "Bob",
             "skills": [
               {
+                "_loaded": true,
                 "id": 1,
                 "name": "Python"
               }
@@ -43,9 +52,12 @@
         "name": "Platform"
       },
       {
+        "_loaded": true,
         "employees": [
           {
+            "_loaded": true,
             "badge": {
+              "_loaded": true,
               "code": "C-1",
               "id": 3
             },
@@ -120,6 +132,13 @@
       ]
     },
     {
+      "_type": "testapp.serializers.EmployeeSerializer",
+      "badge": 3,
+      "id": 3,
+      "name": "Carol",
+      "skills": []
+    },
+    {
       "_type": "testapp.serializers.SkillSerializer",
       "id": 1,
       "name": "Python"
@@ -130,11 +149,6 @@
       "name": "TypeScript"
     },
     {
-      "_type": "testapp.serializers.SkillSerializer",
-      "id": 1,
-      "name": "Python"
-    },
-    {
       "_type": "testapp.serializers.BadgeSerializer",
       "code": "A-1",
       "id": 1
@@ -143,13 +157,6 @@
       "_type": "testapp.serializers.BadgeSerializer",
       "code": "B-1",
       "id": 2
-    },
-    {
-      "_type": "testapp.serializers.EmployeeSerializer",
-      "badge": 3,
-      "id": 3,
-      "name": "Carol",
-      "skills": []
     },
     {
       "_type": "testapp.serializers.BadgeSerializer",

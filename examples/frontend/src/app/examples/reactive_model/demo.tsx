@@ -52,7 +52,9 @@ export function ReactiveModelDemo() {
               {channel.task.name}
             </Field>
             <Field label="Project">
-              {channel.task.project.name}
+              {channel.task.project._loaded
+                ? channel.task.project.name
+                : 'Loading…'}
             </Field>
           </Fields>
         ) : (

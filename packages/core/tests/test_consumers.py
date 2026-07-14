@@ -1,5 +1,6 @@
 """ContextConsumer wire protocol, tested in-process via WebsocketCommunicator."""
 import asyncio
+import json
 
 import pytest
 from channels.routing import URLRouter
@@ -122,7 +123,6 @@ async def test_unknown_action_is_forbidden():
 
 async def test_flush_drains_messages_enqueued_mid_send():
     from rxdjango.consumers import ContextConsumer
-    import json
 
     consumer = ContextConsumer()
     consumer.channel_layer = None  # bare instance; ASGI setup normally sets this
@@ -140,3 +140,81 @@ async def test_flush_drains_messages_enqueued_mid_send():
 
     assert [msg['f'] for msg in sent] == ['a', 'b', 'late']
     assert not consumer._pending_rx
+
+
+def make_walk(*layers):
+    """Build a walk generator like RxModelField._walk_layers deposits:
+    yields ``(value, groups)`` pairs, per test's `layers` spec."""
+    async def walk():
+        for value, groups in layers:
+            yield value, groups
+    return walk()
+
+
+async def test_reassignment_before_drain_supersedes_prior_walk():
+    from rxdjango.consumers import ContextConsumer
+
+    consumer = ContextConsumer()
+    consumer.channel_layer = None
+    sent = []
+    consumer.send = _record_sends(sent)
+
+    consumer.deposit_model_walk('task', make_walk((['stale'], [])))
+    consumer.deposit_model_walk('task', make_walk((['fresh'], [])))
+    await consumer._flush_rx()
+
+    assert [msg['v'] for msg in sent] == [['fresh']]
+
+
+async def test_clearing_before_drain_sends_no_stale_layers():
+    from rxdjango.consumers import ContextConsumer
+
+    consumer = ContextConsumer()
+    consumer.channel_layer = None
+    sent = []
+    consumer.send = _record_sends(sent)
+
+    consumer.deposit_model_walk('task', make_walk((['stale'], [])))
+    consumer.deposit_model_walk('task', None)  # clear supersedes
+    consumer.enqueue_rx('task', None)
+    await consumer._flush_rx()
+
+    assert sent == [{'t': 'rx', 'f': 'task', 'v': None}]
+
+
+async def test_per_layer_group_joins_precede_that_layers_frame():
+    from rxdjango.consumers import ContextConsumer
+
+    consumer = ContextConsumer()
+    events = []
+
+    class FakeChannelLayer:
+        async def group_add(self, group, channel_name):
+            events.append(('join', group))
+
+    consumer.channel_layer = FakeChannelLayer()
+    consumer.channel_name = 'test-channel'
+
+    async def fake_send(text_data=None, **kwargs):
+        events.append(('send', json.loads(text_data)['v']))
+
+    consumer.send = fake_send
+    consumer.deposit_model_walk('task', make_walk(
+        (['task-layer'], ['rx.Task.1']),
+        (['comment-layer'], ['rx.Comment.9']),
+    ))
+    await consumer._flush_rx()
+
+    assert events == [
+        ('join', 'rx.Task.1'),
+        ('send', ['task-layer']),
+        ('join', 'rx.Comment.9'),
+        ('send', ['comment-layer']),
+    ]
+    assert consumer._joined_groups == {'rx.Task.1', 'rx.Comment.9'}
+
+
+def _record_sends(sent):
+    async def fake_send(text_data=None, **kwargs):
+        sent.append(json.loads(text_data))
+    return fake_send

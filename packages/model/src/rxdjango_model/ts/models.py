@@ -167,6 +167,9 @@ def _render_models_module(app, serializers_used):
         app,
         f'Based on serializers used by {app}.channels',
     )
+    if _any_relation_field(serializers_used):
+        lines.append('')
+        lines.append("import type { Unloaded } from '@rxdjango/react';")
     lines.append('')
     for serializer_class in serializers_used:
         lines.extend(_render_interface(serializer_class))
@@ -176,8 +179,24 @@ def _render_models_module(app, serializers_used):
     return '\n'.join(lines)
 
 
+def _any_relation_field(serializers_used):
+    for serializer_class in serializers_used:
+        try:
+            instance = serializer_class()
+        except Exception:
+            continue
+        for field in instance.fields.values():
+            if _nested_serializer_class(field) is not None:
+                return True
+    return False
+
+
 def _render_interface(serializer_class):
     lines = [f'export interface {interface_name(serializer_class)} {{']
+    # Client-injected discriminant (design D5): honest against `Unloaded`,
+    # since the server never sends this field -- `StateBuilder` sets it on
+    # every rebuilt instance, so `if (x._loaded)` narrows with no cast.
+    lines.append('  _loaded: true;')
     serializer = serializer_class()
     for field_name, field in serializer.fields.items():
         lines.append(f'  {field_name}: {_serializer_field_ts_type(field)};')
@@ -195,7 +214,11 @@ def _serializer_field_ts_type(field):
 
 def _serializer_field_base_ts_type(field):
     if isinstance(field, serializers.ListSerializer):
-        return f'{_serializer_field_ts_type(field.child)}[]'
+        # Always a nested-serializer list here (state_model.py's `_build_child`
+        # is the only producer of `many=True` relation fields), so the union
+        # from the BaseSerializer branch below always needs the parens --
+        # `X | Unloaded[]` would parse as `X | (Unloaded[])`.
+        return f'({_serializer_field_ts_type(field.child)})[]'
     if isinstance(field, serializers.ListField):
         return f'{_serializer_field_ts_type(field.child)}[]'
     if isinstance(field, serializers.DictField):
@@ -224,5 +247,8 @@ def _serializer_field_base_ts_type(field):
     )):
         return 'string'
     if isinstance(field, serializers.BaseSerializer):
-        return interface_name(field.__class__)
+        # Relation slot: discriminated union with the unloaded stub shape
+        # (design D5) -- partial state during delivery is expressed in the
+        # types themselves, no cast needed.
+        return f'{interface_name(field.__class__)} | Unloaded'
     return 'any'

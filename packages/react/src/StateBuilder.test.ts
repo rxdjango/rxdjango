@@ -22,16 +22,20 @@ describe("StateBuilder", () => {
     expect(builder.state).toEqual({
       id: 1,
       name: "Alice",
-      company: { id: 10, name: "ACME" },
+      _loaded: true,
+      company: { id: 10, name: "ACME", _loaded: true },
     });
   });
 
-  it("strips underscore-prefixed keys from the output", () => {
+  it("strips underscore-prefixed source keys but injects _loaded", () => {
     const builder = new StateBuilder(model, "app.UserSerializer");
     builder.update([
       { _type: "app.UserSerializer", id: 1, name: "Alice", company: null },
     ]);
-    expect(Object.keys(builder.state as object)).not.toContain("_type");
+    const keys = Object.keys(builder.state as object);
+    expect(keys).not.toContain("_type");
+    expect(keys).toContain("_loaded");
+    expect((builder.state as { _loaded: boolean })._loaded).toBe(true);
   });
 
   it("keeps null relations null", () => {
@@ -39,15 +43,25 @@ describe("StateBuilder", () => {
     builder.update([
       { _type: "app.UserSerializer", id: 1, name: "Alice", company: null },
     ]);
-    expect(builder.state).toEqual({ id: 1, name: "Alice", company: null });
+    expect(builder.state).toEqual({
+      id: 1,
+      name: "Alice",
+      _loaded: true,
+      company: null,
+    });
   });
 
-  it("resolves missing children to null", () => {
+  it("resolves missing children to an unloaded stub, not null", () => {
     const builder = new StateBuilder(model, "app.UserSerializer");
     builder.update([
       { _type: "app.UserSerializer", id: 1, name: "Alice", company: 99 },
     ]);
-    expect(builder.state).toEqual({ id: 1, name: "Alice", company: null });
+    expect(builder.state).toEqual({
+      id: 1,
+      name: "Alice",
+      _loaded: true,
+      company: { id: 99, _loaded: false },
+    });
   });
 
   it("rebuilds array relations in order", () => {
@@ -63,9 +77,10 @@ describe("StateBuilder", () => {
     ]);
     expect(builder.state).toEqual({
       id: 1,
+      _loaded: true,
       members: [
-        { id: 2, name: "Bob" },
-        { id: 1, name: "Alice" },
+        { id: 2, name: "Bob", _loaded: true },
+        { id: 1, name: "Alice", _loaded: true },
       ],
     });
   });
@@ -82,7 +97,8 @@ describe("StateBuilder", () => {
     expect(builder.state).toEqual({
       id: 1,
       name: "Alice",
-      company: { id: 10, name: "ACME Corp" },
+      _loaded: true,
+      company: { id: 10, name: "ACME Corp", _loaded: true },
     });
   });
 });
@@ -251,7 +267,11 @@ describe("StateBuilder identity semantics (ported from v0)", () => {
       task(1, { taskName: "Task #1" }),
       project({ projectName: "Project #1", tasks: [1] }),
     ]);
-    expect(builder.state!.tasks![0]).toEqual({ id: 1, taskName: "Task #1" });
+    expect(builder.state!.tasks![0]).toEqual({
+      id: 1,
+      taskName: "Task #1",
+      _loaded: true,
+    });
   });
 
   it("initializes empty relation lists as empty arrays", () => {
@@ -352,9 +372,11 @@ describe("StateBuilder version watermarks (ADR-0014)", () => {
     expect(builder.state!.tasks!.length).toBe(1);
 
     // Even when a later parent layer lists the pk again, the tombstone has
-    // kept the stale row out of the index.
+    // kept the stale row out of the index -- the slot renders as an unloaded
+    // stub (index-miss is index-miss, whether "not yet arrived" or
+    // "deleted and not resurrected"), not as the deleted row's data.
     builder.update([project({ projectName: "Project #1", tasks: [1, 2] })]);
-    expect(builder.state!.tasks![1]).toBeNull();
+    expect(builder.state!.tasks![1]).toEqual({ id: 2, _loaded: false });
   });
 
   it("discards a delete older than the applied row", () => {
@@ -377,5 +399,130 @@ describe("StateBuilder version watermarks (ADR-0014)", () => {
     ]);
     builder.update([task(1, { taskName: "second" })]);
     expect(builder.state!.tasks![0]!.taskName).toBe("second");
+  });
+});
+
+// Ported from the hand-written v0 suite
+// (rxdjango-0/rxdjango-react/src/StateBuilder.test.ts). v0 pinned unloaded
+// placeholders as first-class partial state; ADR-0016 restores that
+// semantic on top of the rebuild's identity/watermark machinery (design D4).
+
+describe("StateBuilder stub materialization (design D4, ported from v0)", () => {
+  it("materializes stubs for array relation members that haven't arrived", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1, 2, 3] }),
+      task(1, { taskName: "Task #1" }),
+    ]);
+    expect(builder.state!.tasks).toEqual([
+      { id: 1, taskName: "Task #1", _loaded: true },
+      { id: 2, _loaded: false },
+      { id: 3, _loaded: false },
+    ]);
+  });
+
+  it("loads a set member when its data is received, leaving siblings unloaded", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1, 2] }),
+    ]);
+    builder.update([task(1, { taskName: "Task #1" })]);
+
+    const state = builder.state!;
+    expect(state.tasks![0]).toEqual({ id: 1, taskName: "Task #1", _loaded: true });
+    expect(state.tasks![1]).toEqual({ id: 2, _loaded: false });
+  });
+
+  it("materializes a stub for a scalar (FK) relation that hasn't arrived", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "Task #1", user: 7 }),
+    ]);
+    expect(builder.state!.tasks![0]!.user).toEqual({ id: 7, _loaded: false });
+  });
+
+  it("keeps a stub's reference stable across reads while unloaded", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1, 2] }),
+      task(1, { taskName: "Task #1" }),
+    ]);
+    expect(builder.state!.tasks![1]).toBe(builder.state!.tasks![1]);
+  });
+
+  it("replaces a stub with the real instance on arrival, changing reference", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1, 2] }),
+      task(1, { taskName: "Task #1" }),
+    ]);
+    const before = builder.state!.tasks![1];
+    expect(before).toEqual({ id: 2, _loaded: false });
+
+    builder.update([task(2, { taskName: "Task #2" })]);
+    const after = builder.state!.tasks![1];
+
+    expect(after).not.toBe(before);
+    expect(after).toEqual({ id: 2, taskName: "Task #2", _loaded: true });
+  });
+
+  it("replaces a foreign-key stub when it arrives, changing reference", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1] }),
+      task(1, { taskName: "Task #1", user: 7 }),
+    ]);
+    const before = builder.state!.tasks![0]!.user;
+
+    builder.update([user(7, { username: "Grace" })]);
+    const after = builder.state!.tasks![0]!.user;
+
+    expect(after).not.toBe(before);
+    expect(after).toEqual({ id: 7, username: "Grace", _loaded: true });
+  });
+
+  it("propagates a stub-to-real replacement up the ancestor chain", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", customer: 2 }),
+      customer(2, { customerName: "Customer #2", tasks: [1] }),
+      task(1, { taskName: "Task #1", user: 1 }),
+      // `user` is never delivered: task.user stays a stub.
+    ]);
+    const before = builder.state!;
+    expect(before.customer!.tasks![0]!.user).toEqual({ id: 1, _loaded: false });
+
+    builder.update([user(1, { username: "renamed" })]);
+    const after = builder.state!;
+
+    expect(after).not.toBe(before);
+    expect(after.customer).not.toBe(before.customer);
+    expect(after.customer!.tasks).not.toBe(before.customer!.tasks);
+    expect(after.customer!.tasks![0]).not.toBe(before.customer!.tasks![0]);
+    expect(after.customer!.tasks![0]!.user).toEqual({
+      id: 1,
+      username: "renamed",
+      _loaded: true,
+    });
+  });
+
+  it("replaces a stub regardless of the arriving instance's version", () => {
+    const builder = projectBuilder();
+    builder.update([
+      project({ projectName: "Project #1", tasks: [1, 2] }),
+      task(1, { taskName: "Task #1", _v: 1 }),
+    ]);
+    expect(builder.state!.tasks![1]).toEqual({ id: 2, _loaded: false });
+
+    // No watermark was ever recorded for task 2 (a stub carries no `_v`), so
+    // any version -- including one that would look "stale" for an
+    // already-seen key -- applies unconditionally.
+    builder.update([task(2, { taskName: "Task #2", _v: 1 })]);
+    expect(builder.state!.tasks![1]).toEqual({
+      id: 2,
+      taskName: "Task #2",
+      _loaded: true,
+    });
   });
 });

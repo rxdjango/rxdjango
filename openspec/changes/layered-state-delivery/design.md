@@ -59,7 +59,9 @@ ADR-0016 left the exact union shape to implementation (within ADR-0011's hooks).
 
 ### D7. Sequencing: two shots, backend first
 
-Shot 1 (backend: D1–D3, D6) is wire-compatible — same flat instances in more, smaller frames — so the existing Django suite validates it with only the frame-count/protocol assertions updated and zero frontend changes (a `null`-rebuilding client still converges once all layers land). Shot 2 (client + codegen: D4–D5) then changes what partial state looks like, pinned by the ported v0 tests.
+Shot 1 (backend: D1–D3, D6) is wire-compatible — same flat instances in more, smaller frames — so the existing Django suite validates it with only the frame-count/protocol assertions updated (a `null`-rebuilding client still converges once all layers land).
+
+*"Zero frontend changes" turned out to be too strong a claim.* Running the full e2e suite surfaced two example components (`nested_model`/`reactive_model`) that read a nested relation unconditionally — `channel.task.project.name`, `channel.user.company.name`. Under monolithic delivery this was safe: the parent and its nested child always arrived in the same frame, so the parent was never observably non-null while the child was still `null`. Layered delivery makes that an *always-real* transient window (the parent's frame lands before the child's), so these two reads threw and broke rendering. Fixed with optional chaining (`?.`) in both components — a minimal crash guard against a real, now-observable intermediate state, not the `_loaded` discriminated-union typing work, which stays Shot 2 scope. Shot 2 (client + codegen: D4–D5) then changes what partial state looks like, pinned by the ported v0 tests.
 
 ## Risks / Trade-offs
 

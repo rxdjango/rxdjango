@@ -1,20 +1,26 @@
 """StateModel introspection and flat-layer serialization."""
 import pytest
+from asgiref.sync import async_to_sync
 
 from rxdjango_model.state_model import StateModel
 
 from testapp.models import Employee
 from testapp.serializers import CompanySerializer, EmployeeWithTeamSerializer
 
-pytestmark = pytest.mark.django_db
+# transaction=True: serialize_state's layer queries run off the event loop
+# via database_sync_to_async, on a thread that can't share a savepoint-based
+# django_db transaction with the test's own connection.
+pytestmark = pytest.mark.django_db(transaction=True)
 
 
 def flatten(state_model, instance):
-    return [
-        entry
-        for _node, layer in state_model.serialize_state(instance)
-        for entry in layer
-    ]
+    async def _collect():
+        return [
+            entry
+            async for _node, layer in state_model.serialize_state(instance)
+            for entry in layer
+        ]
+    return async_to_sync(_collect)()
 
 
 def test_tree_shape():
@@ -113,10 +119,53 @@ def test_serialize_delete_shape(company_tree):
     }
 
 
-def test_prefetched_tree_serializes_with_zero_queries(prefetched_company, django_assert_num_queries):
+def test_walk_issues_one_query_per_type_regardless_of_row_count(
+    prefetched_company, django_assert_num_queries,
+):
+    """O(edges), not O(rows) (ADR-0016): every query is batched via
+    `pk__in`/`IN (...)`, so the count is fixed by the serializer tree's
+    edges, never by row counts.
+
+    Company (anchor; teams/employees/skills/badges already prefetched by the
+    caller, 0 queries here) -> Team pk__in (1) -> [prefetch Team.employees,
+    needed so the Team layer's own dict carries its employees' pks without a
+    DRF per-row query] (1) -> Employee pk__in (1) -> [prefetch
+    Employee.skills, Employee.badge, same reason] (2) -> Skill pk__in (1) ->
+    Badge pk__in (1) = 7 queries total, independent of row counts (see
+    `test_query_count_does_not_scale_with_row_count`).
+    """
     sm = StateModel(CompanySerializer())
-    with django_assert_num_queries(0):
+    with django_assert_num_queries(7):
         flatten(sm, prefetched_company)
+
+
+def test_query_count_does_not_scale_with_row_count(company_tree, django_assert_num_queries):
+    """Doubling the fixture's rows must not change the query count."""
+    from testapp.models import Company, Employee, Team
+
+    extra_team = Team.objects.create(id=3, name='Ops', company=company_tree)
+    for i in range(5, 15):
+        Employee.objects.create(id=i, name=f'Employee {i}', team=extra_team)
+
+    prefetched = Company.objects.prefetch_related(
+        'teams__employees__skills',
+        'teams__employees__badge',
+    ).get(id=company_tree.id)
+
+    sm = StateModel(CompanySerializer())
+    with django_assert_num_queries(7):
+        flatten(sm, prefetched)
+
+
+def test_shared_child_fetched_once(prefetched_company):
+    """Two employees (Alice, Bob) share team #1 (Platform) as a fan-in edge;
+    the team layer must carry that shared pk once, not once per referrer."""
+    flat = flatten(StateModel(CompanySerializer()), prefetched_company)
+    team_ids = [
+        entry['id'] for entry in flat
+        if entry['_type'].endswith('TeamSerializer')
+    ]
+    assert sorted(team_ids) == [1, 2]
 
 
 def test_serialize_does_not_instantiate_serializers(prefetched_company, monkeypatch):

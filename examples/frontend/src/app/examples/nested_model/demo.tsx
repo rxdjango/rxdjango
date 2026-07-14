@@ -37,7 +37,10 @@ export function NestedModelDemo() {
       <div>
         {channel.user ? (
           <p>
-            You are user "{channel.user.name}" at "{channel.user.company.name}"
+            You are user "{channel.user.name}" at "
+            {channel.user.company._loaded
+              ? channel.user.company.name
+              : 'Loading…'}"
           </p>
         ) : (
           <p>
