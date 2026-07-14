@@ -150,12 +150,14 @@ class ContextConsumer(AsyncWebsocketConsumer):
         params = action.get('p')
 
         if call_id is None or method_name is None or params is None:
-            if call_id is not None:
-                await self.send(text_data=json.dumps({
-                    't': 'ac',
-                    'id': call_id,
-                    'e': [400, 'Invalid action message: requires id, a, and p fields'],
-                }))
+            # With no id the error frame carries `id: null` — uncorrelatable
+            # by design, but a misbehaving client is diagnosable rather than
+            # silently ignored.
+            await self.send(text_data=json.dumps({
+                't': 'ac',
+                'id': call_id,
+                'e': [400, 'Invalid action message: requires id, a, and p fields'],
+            }))
             return
 
         if not isinstance(params, list):

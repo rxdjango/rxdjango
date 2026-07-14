@@ -50,12 +50,18 @@ A client action call SHALL be sent as `{"t": "ac", "a": "<method>", "id": "<call
 
 ### Requirement: Malformed action requests are answered with 400
 
-When an `ac` request is missing `a` or `p`, or `p` is not an array, the server SHALL respond with `{"t": "ac", "id": ..., "e": [400, "<message>"]}` if the request carried an `id`, and SHALL not execute any action. A request missing its `id` SHALL be ignored, since no response can be correlated.
+When an `ac` request is missing `id`, `a`, or `p`, or `p` is not an array, the server SHALL respond with `{"t": "ac", "id": ..., "e": [400, "<message>"]}` and SHALL NOT execute any action. A request missing its `id` gets the error frame with `id: null` — uncorrelatable by design, sent so a misbehaving client is diagnosable rather than silently ignored.
 
 #### Scenario: Non-array params
 
 - **WHEN** the client sends an `ac` frame whose `p` is not an array
 - **THEN** the server responds with an error frame whose `e` code is 400
+- **AND** no action method runs
+
+#### Scenario: Missing id still gets a diagnostic error
+
+- **WHEN** the client sends an `ac` frame with `a` and `p` but no `id`
+- **THEN** the server responds with an error frame whose `e` code is 400 and whose `id` is `null`
 - **AND** no action method runs
 
 ### Requirement: Invalid frames are rejected

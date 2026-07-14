@@ -103,6 +103,15 @@ async def test_action_params_must_be_a_list():
     await comm.disconnect()
 
 
+async def test_action_message_without_id_gets_uncorrelatable_error():
+    comm, _ = await connect()
+    await comm.send_json_to({'t': 'ac', 'a': 'ping', 'p': []})
+    response = await comm.receive_json_from(timeout=1)
+    assert response['id'] is None
+    assert response['e'][0] == 400
+    await comm.disconnect()
+
+
 async def test_unknown_action_is_forbidden():
     comm, _ = await connect()
     await comm.send_json_to({'t': 'ac', 'id': '9', 'a': 'missing', 'p': []})
