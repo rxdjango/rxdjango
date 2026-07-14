@@ -101,10 +101,18 @@ def resolve_model_field_ts_type(rx_field):
 
 
 def resolve_model_imports(app, channels):
-    serializers_used = _collect_serializers(channels)
-    if not serializers_used:
+    # Only anchor serializers appear as identifiers in the channels file
+    # (field declarations); nested types are referenced there by _type
+    # string literals only, and importing them trips no-unused-vars.
+    anchors = []
+    for channel_cls in channels:
+        for rx_field in channel_cls._rx_fields.values():
+            if isinstance(rx_field, RxModelField):
+                if rx_field.serializer_class not in anchors:
+                    anchors.append(rx_field.serializer_class)
+    if not anchors:
         return []
-    names = ', '.join(sorted(interface_name(cls) for cls in serializers_used))
+    names = ', '.join(sorted(interface_name(cls) for cls in anchors))
     return [f"import type {{ {names} }} from './{app}.models';"]
 
 

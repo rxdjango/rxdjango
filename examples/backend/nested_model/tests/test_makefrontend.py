@@ -58,6 +58,9 @@ class NestedModelMakeFrontendTests(TestCase):
         self.assertIn('nested_model.serializers.UserSerializer', content)
         self.assertIn('nested_model.serializers.CompanySerializer', content)
         self.assertIn('"company": "nested_model.serializers.CompanySerializer"', content)
+        # Only the anchor type is imported as an identifier; nested types
+        # appear in _modelFields as string literals only.
+        self.assertIn("import type { User } from './nested_model.models';", content)
 
     def test_generated_models_file_has_both_interfaces(self):
         with override_settings(
