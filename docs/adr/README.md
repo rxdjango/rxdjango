@@ -45,5 +45,6 @@ a row to the index below in the same PR.
 | 0016 | [Layered state delivery and the per-instance cache direction](0016-layered-state-delivery.md) | 2026-07-12 | Active |
 | 0017 | [Reactive list fields with delta operations](0017-reactive-list-fields.md) | 2026-07-16 | Active |
 | 0018 | [Route live list delivery through per-field Router declarations](0018-router-based-list-delivery.md) | 2026-07-15 | Active |
+| 0019 | [Derive list membership client-side from a bare queryset interface](0019-client-derived-list-membership.md) | 2026-07-15 | Active |
 
 Status is `Active` by default. Use `Superseded by ADR-NNNN` when replaced.
