@@ -44,7 +44,7 @@ class TaskBoardProtocolTests(RxProtocolTestCase):
 
         self.assertEqual(
             anchor['q']['w'],
-            [['project_id', 'exact', 301], ['status', 'exact', 'open']],
+            [['project', 'exact', 301], ['status', 'exact', 'open']],
         )
         self.assertTrue(anchor['q']['l'])
         self.assertNotIn('o', anchor)

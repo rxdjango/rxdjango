@@ -17,13 +17,18 @@ from task_board.models import Project, Task
 class TaskBoardE2ETests(RxE2ETestCase):
     def setUp(self):
         # Seed before Playwright's sync_api attaches to this thread's event
-        # loop (see reactive_model/static_list's e2e tests): afterwards
+        # loop (see reactive_model/static_queryset's e2e tests): afterwards
         # Django blocks ORM calls as SynchronousOnlyOperation.
         #
-        # The demo hardcodes its two boards to project_id 1 and 2 (matching
-        # the migration-seeded Project rows) so a project selector isn't
-        # needed for the demo to be interactive -- project rows themselves
-        # are left as the migration seeded them; only Task rows are reset.
+        # The demo hardcodes its two boards to project_id 1 and 2. `Task`
+        # tests: `TransactionTestCase` flushes every table between tests
+        # (needed so the live-server subprocess sees committed rows), which
+        # also clears the migration-seeded `Project` rows -- harmless before
+        # `project` was a real `ForeignKey`, but a referential-integrity
+        # requirement now, so both boards' Project rows are re-seeded here
+        # too, not just Task.
+        Project.objects.get_or_create(id=1, defaults={'name': 'Website Redesign'})
+        Project.objects.get_or_create(id=2, defaults={'name': 'Mobile App'})
         Task.objects.all().delete()
         self.low = Task.objects.create(id=501, name='Low task', status='open', priority=1, project_id=1)
         self.high = Task.objects.create(id=502, name='High task', status='open', priority=5, project_id=1)

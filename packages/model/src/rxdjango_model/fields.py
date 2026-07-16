@@ -87,6 +87,8 @@ class RxModelField(RxField):
         # dimension happens inside register_router, keyed by the Router's
         # own `key`.
         if self.routing is not None:
+            if isinstance(self.routing, ColumnRouter):
+                self.routing.bind_model(self.state_model.model)
             register_router(self.state_model.model, self.routing)
 
     def __get__(self, obj, objtype=None):

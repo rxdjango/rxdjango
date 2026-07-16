@@ -17,26 +17,32 @@ class Project(models.Model):
         return self.name
 
 
-class Task(ReactiveModel):
-    """A task on a project's board. `project_id` is a plain column, not a
-    Django `ForeignKey` -- deliberately, per ADR-0018's own framing
-    ("like `db_index`": an explicit access path, not a relational
-    constraint) and so the column-sugar `routing='project_id'` matches the
-    same name on both the model attribute (`Router.publish`) and the
-    queryset condition Django's query compiler resolves
-    (`Router.subscribe`/bind-time introspection) -- a Django FK's `.name`
-    ('project') and its `_id` attname ('project_id') differ, which the
-    column sugar does not (yet) reconcile.
+STATUS_CHOICES = [
+    ('open', 'Open'),
+    ('closed', 'Closed'),
+]
 
-    A task's creation, and any move to a different `project_id`, is
+
+class Task(ReactiveModel):
+    """A task on a project's board. `project` is a real Django `ForeignKey`
+    to `Project` -- `ColumnRouter.bind_model` resolves the declared
+    `routing=` column through `model._meta` to the field's canonical
+    attname (`'project_id'`), so `routing='project_id'` and
+    `routing='project'` are the same dimension regardless of which spelling
+    a declaration uses, and a bound queryset may filter it as
+    `.filter(project=obj)`, `.filter(project_id=5)`, or
+    `.filter(project__id=5)` interchangeably (all three resolve to the same
+    column at the Django query-compiler level).
+
+    A task's creation, and any move to a different `project`, is
     delivered live to every connection watching that project -- no rebind,
-    unlike `static_list`'s Task.
+    unlike `static_queryset`'s Task.
     """
 
     name = models.CharField(max_length=64)
-    status = models.CharField(max_length=16, default='open')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='open')
     priority = models.IntegerField(default=0)
-    project_id = models.IntegerField()
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

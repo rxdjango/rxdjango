@@ -21,7 +21,7 @@ from rxdjango_model.routing_registry import (
     routing_registry,
 )
 
-from testapp.models import Employee, Task
+from testapp.models import Company, Employee, Task, Team
 from testapp.serializers import CompanySerializer, EmployeeWithTeamSerializer, TaskSerializer
 
 
@@ -67,6 +67,67 @@ def test_column_router_subscribe_before_bind_field_is_empty():
     router = ColumnRouter('priority')
     channel = SimpleNamespace(tasks=Task.objects.filter(priority=5))
     assert router.subscribe(channel) == []
+
+
+# -- ForeignKey columns: both spellings, all three filter forms -----------
+# `Employee.team` is a real ForeignKey (testapp.models); `team` is the
+# field's own name, `team_id` its `_id` attname (routed-list-delivery's
+# known weakness: matching only against `Col.target.name` means
+# `routing='team_id'` silently never matched anything on a real FK).
+
+
+@pytest.mark.django_db
+class TestColumnRouterOnForeignKey:
+    def test_bind_model_resolves_field_name_spelling(self):
+        router = ColumnRouter('team')
+        router.bind_model(Employee)
+        assert router.key == 'team_id'
+        assert router.columns == ('team_id',)
+
+    def test_bind_model_resolves_attname_spelling(self):
+        router = ColumnRouter('team_id')
+        router.bind_model(Employee)
+        assert router.key == 'team_id'
+        assert router.columns == ('team_id',)
+
+    def test_bind_model_is_idempotent(self):
+        router = ColumnRouter('team')
+        router.bind_model(Employee)
+        router.bind_model(Employee)
+        assert router.key == 'team_id'
+
+    def test_bind_model_rejects_a_column_that_names_nothing(self):
+        router = ColumnRouter('bogus')
+        with pytest.raises(TypeError, match="does not name a field or column"):
+            router.bind_model(Employee)
+
+    def test_publish_reads_the_raw_pk_regardless_of_declared_spelling(self):
+        team = Team.objects.create(id=1, name='Platform', company=Company.objects.create(id=1, name='ACME'))
+        employee = Employee.objects.create(id=1, name='Alice', team=team)
+
+        field_name_router = ColumnRouter('team')
+        field_name_router.bind_model(Employee)
+        assert list(field_name_router.publish(employee)) == [team.id]
+
+        attname_router = ColumnRouter('team_id')
+        attname_router.bind_model(Employee)
+        assert list(attname_router.publish(employee)) == [team.id]
+
+    @pytest.mark.parametrize('declared', ['team', 'team_id'])
+    @pytest.mark.parametrize('filtered', [
+        lambda team: Employee.objects.filter(team=team),
+        lambda team: Employee.objects.filter(team_id=team.id),
+        lambda team: Employee.objects.filter(team__id=team.id),
+    ])
+    def test_subscribe_matches_every_filter_spelling(self, declared, filtered):
+        company = Company.objects.create(name='ACME')
+        team = Team.objects.create(name='Platform', company=company)
+
+        router = ColumnRouter(declared)
+        router.bind_model(Employee)
+        router.bind_field('employees')
+        channel = SimpleNamespace(employees=filtered(team))
+        assert router.subscribe(channel) == [team.id]
 
 
 def test_broadcast_router_is_a_constant_on_both_sides():

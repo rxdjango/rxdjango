@@ -29,6 +29,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from django.core.exceptions import FieldDoesNotExist
+
 
 class Router:
     """Base class for a `many=True` field's live-delivery dimension."""
@@ -56,29 +58,71 @@ class ColumnRouter(Router):
     assigned to the field this Router is declared on. Field binding happens
     once, mechanically, from `RxModelField.__set_name__`; it is not part of
     the public Router contract.
+
+    `column` may name either a ForeignKey's field (`'project'`) or its
+    `_id` attname (`'project_id'`) -- `bind_model` (called once from
+    `RxModelField.contribute_to_channel`, mirroring `bind_field`) resolves
+    whichever spelling was declared to the model field's canonical attname
+    through `model._meta`, so dimension/group identity (`key`, `columns`)
+    and `publish`'s attribute read never depend on which spelling a
+    particular declaration used, and `subscribe`'s queryset matching
+    recognizes a bound queryset's condition regardless of which spelling
+    *it* was written with (`.filter(project=obj)`, `.filter(project_id=5)`,
+    and `.filter(project__id=5)` all resolve to the same underlying column
+    at the Django query-compiler level). A `column` that names neither a
+    field nor a column of the bound model is a loud declaration-time error.
     """
 
     def __init__(self, column: str) -> None:
         self.column = column
         self.columns = (column,)
         self._field_name: str | None = None
+        self._model: type | None = None
+        self._attname: str | None = None
+        self._model_field_name: str | None = None
 
     def bind_field(self, field_name: str) -> None:
         if self._field_name is None:
             self._field_name = field_name
 
+    def bind_model(self, model: type) -> None:
+        if self._model is not None:
+            return
+        try:
+            field = model._meta.get_field(self.column)
+        except FieldDoesNotExist:
+            field = None
+        if field is None or not hasattr(field, 'attname'):
+            raise TypeError(
+                f"routing={self.column!r} does not name a field or column "
+                f"of {model.__name__!r}"
+            )
+        self._model = model
+        self._attname = field.attname
+        self._model_field_name = field.name
+        self.columns = (field.attname,)
+
     @property
     def key(self) -> str:
-        return self.column
+        return self._attname or self.column
 
     def publish(self, instance: Any) -> Iterable[Any]:
-        return [getattr(instance, self.column, None)]
+        attr = self._attname or self.column
+        return [getattr(instance, attr, None)]
 
     def subscribe(self, channel: Any) -> Iterable[Any]:
         if self._field_name is None:
             return []
         queryset = getattr(channel, self._field_name, None)
-        return _column_equality_values(queryset, self.column)
+        return _column_equality_values(queryset, self._match_names())
+
+    def _match_names(self) -> frozenset[str]:
+        names = {self.column}
+        if self._attname:
+            names.add(self._attname)
+        if self._model_field_name:
+            names.add(self._model_field_name)
+        return frozenset(names)
 
     def __repr__(self) -> str:
         return f'ColumnRouter({self.column!r})'
@@ -106,31 +150,37 @@ class BroadcastRouter(Router):
         return 'BroadcastRouter()'
 
 
-def _column_equality_values(queryset: Any, column: str) -> list[Any]:
+def _column_equality_values(queryset: Any, names: Iterable[str]) -> list[Any]:
     """Best-effort extraction of the `exact`/`in` values a queryset filters
-    `column` to. Not a validator (query_introspection owns bind validation,
-    unchanged per design D7) -- conditions this can't make sense of are
-    silently skipped rather than raised, since this only shapes which
-    dimension groups a connection joins, not correctness."""
+    one of `names` (a column's every known spelling -- declared string,
+    resolved attname, resolved field name) to. Not a validator
+    (query_introspection owns bind validation, unchanged per design D7) --
+    conditions this can't make sense of are silently skipped rather than
+    raised, since this only shapes which dimension groups a connection
+    joins, not correctness."""
     query = getattr(queryset, 'query', None)
     if query is None:
         return []
+    names = frozenset(names)
     values: list[Any] = []
-    _collect_column_values(query.where, column, values)
+    _collect_column_values(query.where, names, values)
     return values
 
 
-def _collect_column_values(node: Any, column: str, values: list[Any]) -> None:
+def _collect_column_values(node: Any, names: frozenset[str], values: list[Any]) -> None:
     children = getattr(node, 'children', None)
     if not children:
         return
     for child in children:
         if getattr(child, 'children', None) is not None:
-            _collect_column_values(child, column, values)
+            _collect_column_values(child, names, values)
             continue
         lhs = getattr(child, 'lhs', None)
         target = getattr(lhs, 'target', None)
-        if target is None or getattr(target, 'name', None) != column:
+        if target is None:
+            continue
+        target_names = {getattr(target, 'name', None), getattr(target, 'attname', None)}
+        if not (target_names & names):
             continue
         lookup_name = getattr(child, 'lookup_name', None)
         if lookup_name == 'exact':
