@@ -10,16 +10,16 @@ import { CarouselPage as ExamplesCarouselPage } from './examples/carousel/Carous
 import { CarouselDemo } from './examples/carousel/demo';
 import { MemoPage as ExamplesMemoPage } from './examples/memo/MemoPage';
 import { MemoDemo } from './examples/memo/demo';
-import { AuthorizationPage as ExamplesAuthorizationPage } from './examples/authorization/AuthorizationPage';
-import { AuthorizationDemo } from './examples/authorization/demo';
-import { AuthorizationMetaPage as ExamplesAuthorizationMetaPage } from './examples/authorization_meta/AuthorizationMetaPage';
-import { AuthorizationMetaDemo } from './examples/authorization_meta/demo';
 import { SimpleModelPage as ExamplesSimpleModelPage } from './examples/simple_model/SimpleModelPage';
 import { SimpleModelDemo } from './examples/simple_model/demo';
 import { NestedModelPage as ExamplesNestedModelPage } from './examples/nested_model/NestedModelPage';
 import { NestedModelDemo } from './examples/nested_model/demo';
 import { ReactiveModelPage as ExamplesReactiveModelPage } from './examples/reactive_model/ReactiveModelPage';
 import { ReactiveModelDemo } from './examples/reactive_model/demo';
+import { AuthorizationPage as ExamplesAuthorizationPage } from './examples/authorization/AuthorizationPage';
+import { AuthorizationDemo } from './examples/authorization/demo';
+import { AuthorizationMetaPage as ExamplesAuthorizationMetaPage } from './examples/authorization_meta/AuthorizationMetaPage';
+import { AuthorizationMetaDemo } from './examples/authorization_meta/demo';
 import { ScalarListPage as ExamplesScalarListPage } from './examples/scalar_list/ScalarListPage';
 import { ScalarListDemo } from './examples/scalar_list/demo';
 import { ListTypesPage as ExamplesListTypesPage } from './examples/list_types/ListTypesPage';
@@ -48,11 +48,11 @@ export const pages: Page[] = [
   { slug: 'examples/counter', title: 'Basic channel', depth: 1, parent: 'examples', Component: ExamplesCounterPage, Demo: CounterDemo },
   { slug: 'examples/carousel', title: 'rx fields', depth: 1, parent: 'examples', Component: ExamplesCarouselPage, Demo: CarouselDemo },
   { slug: 'examples/memo', title: '@memo', depth: 1, parent: 'examples', Component: ExamplesMemoPage, Demo: MemoDemo },
-  { slug: 'examples/authorization', title: 'Authorization', depth: 1, parent: 'examples', Component: ExamplesAuthorizationPage, Demo: AuthorizationDemo },
-  { slug: 'examples/authorization_meta', title: 'Authorization Meta', depth: 1, parent: 'examples', Component: ExamplesAuthorizationMetaPage, Demo: AuthorizationMetaDemo },
   { slug: 'examples/simple_model', title: 'Simple model', depth: 1, parent: 'examples', Component: ExamplesSimpleModelPage, Demo: SimpleModelDemo },
   { slug: 'examples/nested_model', title: 'Nested model', depth: 1, parent: 'examples', Component: ExamplesNestedModelPage, Demo: NestedModelDemo },
   { slug: 'examples/reactive_model', title: 'Reactive model', depth: 1, parent: 'examples', Component: ExamplesReactiveModelPage, Demo: ReactiveModelDemo },
+  { slug: 'examples/authorization', title: 'Authorization', depth: 1, parent: 'examples', Component: ExamplesAuthorizationPage, Demo: AuthorizationDemo },
+  { slug: 'examples/authorization_meta', title: 'Authorization Meta', depth: 1, parent: 'examples', Component: ExamplesAuthorizationMetaPage, Demo: AuthorizationMetaDemo },
   { slug: 'examples/scalar_list', title: 'Reactive list of scalars', depth: 1, parent: 'examples', Component: ExamplesScalarListPage, Demo: ScalarListDemo },
   { slug: 'examples/list_types', title: 'Union and optional list elements', depth: 1, parent: 'examples', Component: ExamplesListTypesPage, Demo: ListTypesDemo },
   { slug: 'examples/streaming_list', title: 'Streaming list updates', depth: 1, parent: 'examples', Component: ExamplesStreamingListPage, Demo: StreamingListDemo },

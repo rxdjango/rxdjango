@@ -1,8 +1,9 @@
 # Examples
 
-These examples show how RxDjango works.
-Each example is a Django app. You can see the source
-code and interact with the widgets in each example.
+Each example is a small, complete Django app with a live demo: read the
+real source on the left, interact with the running widget on the right.
+They build on each other, from a single reactive value to live,
+server-routed lists.
 
 ```{toctree}
 :maxdepth: 1
@@ -10,11 +11,11 @@ code and interact with the widgets in each example.
 counter
 carousel
 memo
-authorization
-authorization_meta
 simple_model
 nested_model
 reactive_model
+authorization
+authorization_meta
 scalar_list
 list_types
 streaming_list

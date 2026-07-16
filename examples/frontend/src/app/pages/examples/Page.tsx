@@ -10,7 +10,7 @@ export function ExamplesPage() {
         Examples
       </h1>
       <p className="mt-4 max-w-prose text-base leading-relaxed text-primary-800">
-        These examples show how RxDjango works. Each example is a Django app. You can see the source code and interact with the widgets in each example.
+        Each example is a small, complete Django app with a live demo: read the real source on the left, interact with the running widget on the right. They build on each other, from a single reactive value to live, server-routed lists.
       </p>
       <ul className="mt-6 flex flex-col gap-2">
         <li>
@@ -29,16 +29,6 @@ export function ExamplesPage() {
           </a>
         </li>
         <li>
-          <a href={`${process.env.PUBLIC_URL || ''}/examples/authorization`} className="text-primary-700 hover:underline">
-            Authorization
-          </a>
-        </li>
-        <li>
-          <a href={`${process.env.PUBLIC_URL || ''}/examples/authorization_meta`} className="text-primary-700 hover:underline">
-            Authorization Meta
-          </a>
-        </li>
-        <li>
           <a href={`${process.env.PUBLIC_URL || ''}/examples/simple_model`} className="text-primary-700 hover:underline">
             Simple model
           </a>
@@ -51,6 +41,16 @@ export function ExamplesPage() {
         <li>
           <a href={`${process.env.PUBLIC_URL || ''}/examples/reactive_model`} className="text-primary-700 hover:underline">
             Reactive model
+          </a>
+        </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/authorization`} className="text-primary-700 hover:underline">
+            Authorization
+          </a>
+        </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/authorization_meta`} className="text-primary-700 hover:underline">
+            Authorization Meta
           </a>
         </li>
         <li>
