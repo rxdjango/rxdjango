@@ -28,10 +28,10 @@
 
 ## 5. Convergence and semantics tests (backend suite)
 
-- [ ] 5.1 Table-driven mutator convergence test: iterate the same mutator table as D2 (append, insert, `__setitem__`, `__delitem__`, remove, pop, extend, clear, sort, reverse, `+=`, `*=`, slice assignment/deletion); apply server-side, assert client list equals server list
-- [ ] 5.2 Burst-ordering test: interleaved op sequence in one action converges
-- [ ] 5.3 None-union semantics test: `null` travels on replace; `AttributeError` on mutate-while-None; wrong-typed append raises and sends nothing
-- [ ] 5.4 Connection-isolation test: one connection's mutation leaves another's list untouched
+- [x] 5.1 Table-driven mutator convergence test: iterate the same mutator table as D2 (append, insert, `__setitem__`, `__delitem__`, remove, pop, extend, clear, sort, reverse, `+=`, `*=`, slice assignment/deletion); apply server-side, assert client list equals server list
+- [x] 5.2 Burst-ordering test: interleaved op sequence in one action converges
+- [x] 5.3 None-union semantics test: `null` travels on replace; `AttributeError` on mutate-while-None; wrong-typed append raises and sends nothing
+- [x] 5.4 Connection-isolation test: one connection's mutation leaves another's list untouched
 
 ## 6. Example: scalar_list (docs page + app + demo + e2e)
 

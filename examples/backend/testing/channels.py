@@ -55,6 +55,97 @@ class MemoTrackingChannel(ContextChannel):
         return self.field_b * 2
 
 
+class ListConvergenceChannel(ContextChannel):
+    """Exercises the full rx[list[S]] mutator table (ADR-0017 design D2) so
+    the backend suite can drive every mutator server-side and assert the
+    real TS client's list converges to the server's list.
+    """
+
+    items = rx[list[int]]([1, 2, 3])
+    optional_items = rx[list[int] | None]()
+
+    @action
+    async def do_append(self, value: int):
+        self.items.append(value)
+
+    @action
+    async def do_insert(self, index: int, value: int):
+        self.items.insert(index, value)
+
+    @action
+    async def do_setitem(self, index: int, value: int):
+        self.items[index] = value
+
+    @action
+    async def do_delitem(self, index: int):
+        del self.items[index]
+
+    @action
+    async def do_remove(self, value: int):
+        self.items.remove(value)
+
+    @action
+    async def do_pop(self):
+        return self.items.pop()
+
+    @action
+    async def do_extend(self, values: list[int]):
+        self.items.extend(values)
+
+    @action
+    async def do_iadd(self, values: list[int]):
+        self.items += values
+
+    @action
+    async def do_clear(self):
+        self.items.clear()
+
+    @action
+    async def do_sort(self):
+        self.items.sort()
+
+    @action
+    async def do_reverse(self):
+        self.items.reverse()
+
+    @action
+    async def do_imul(self, n: int):
+        self.items *= n
+
+    @action
+    async def do_slice_assign(self):
+        self.items[0:2] = [100, 101, 102]
+
+    @action
+    async def do_slice_delete(self):
+        del self.items[0:2]
+
+    @action
+    async def do_reset(self, values: list[int]):
+        self.items = values
+
+    @action
+    async def do_burst(self):
+        # Interleaved insert/set/delete in one action; frames must arrive in
+        # mutation order and the client must converge to the server's list.
+        self.items.append(10)
+        self.items.insert(0, -1)
+        self.items[1] = 999
+        del self.items[-1]
+
+    @action
+    async def do_append_optional(self, value: int):
+        self.optional_items.append(value)
+
+    @action
+    async def do_set_optional(self, values: list[int] | None):
+        self.optional_items = values
+
+    @action
+    async def do_wrong_type_append(self):
+        self.items.append('not an int')  # noqa: intentionally invalid
+
+
 class VersionConsistencyChannel(ContextChannel):
     """Exercises the client-side version watermark (ADR-0014).
 
