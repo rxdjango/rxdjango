@@ -6,10 +6,12 @@ from typing import Any
 from rest_framework import serializers
 from rxdjango.rx import RxField, _propagate_to_memos
 
+from channels.db import database_sync_to_async
+
 from .query_introspection import introspect_queryset
 from .reactive_registry import group_name, register_layer
 from .routing import ColumnRouter, Router
-from .routing_registry import register_router
+from .routing_registry import register_router, route_groups_for_router
 from .state_model import StateModel
 
 
@@ -111,12 +113,17 @@ class RxModelField(RxField):
                     # an unsupported condition or ordering column fails
                     # loudly right here, before any layer is queried.
                     descriptor = introspect_queryset(value, self.state_model).to_wire()
-                consumer.deposit_model_walk(self.name, self._walk_layers(value, descriptor))
+                    if self.routing is not None:
+                        # Live marker (ADR-0018 design D5, wire-protocol):
+                        # tells the client this field's membership basis may
+                        # grow from qualifying events, not just shrink.
+                        descriptor['l'] = True
+                consumer.deposit_model_walk(self.name, self._walk_layers(value, obj, descriptor))
         if old != value:
             _propagate_to_memos(obj, self.name)
 
     async def _walk_layers(
-        self, value: Any, descriptor: dict[str, Any] | None = None,
+        self, value: Any, channel: Any, descriptor: dict[str, Any] | None = None,
     ) -> AsyncGenerator[tuple[Any, list[str], dict[str, Any] | None], None]:
         """Bridge deposited on the consumer for it to drain (design D6).
 
@@ -133,8 +140,19 @@ class RxModelField(RxField):
         them immediately before sending that layer's frame), and the bind
         descriptor -- non-``None`` only on the walk's first (anchor) layer of
         a ``many=True`` field (ADR-0019 D1), ``None`` on every other frame.
+
+        For a routed field (ADR-0018 design D3), the first layer's groups
+        additionally carry the dimension groups ``self.routing.subscribe(channel)``
+        resolves to -- computed off the event loop, since a custom Router's
+        ``subscribe`` may query the database. Joining them alongside the
+        anchor's own per-instance groups, before that frame is sent, is
+        "consumer bind... joins the dimension groups" (list-routing): one
+        join-before-send mechanism, reused rather than duplicated.
         """
         first = True
+        dimension_groups: list[str] = []
+        if self.routing is not None:
+            dimension_groups = await database_sync_to_async(self._dimension_groups)(channel)
         async for node, layer in self.state_model.serialize_state(value):
             groups: list[str] = []
             if node.reactive:
@@ -142,8 +160,21 @@ class RxModelField(RxField):
                     instance_id = item.get('id')
                     if instance_id is not None:
                         groups.append(group_name(node.instance_type, instance_id))
+            if first and dimension_groups:
+                groups = groups + dimension_groups
             yield _plain(layer), groups, (descriptor if first else None)
             first = False
+
+    def _dimension_groups(self, channel: Any) -> list[str]:
+        """``subscribe(channel)`` resolved to this field's dimension groups
+        (ADR-0018 design D1/D3), ``None`` values filtered by
+        ``route_groups_for_router``, scoped to *this* field's own Router --
+        a model may register more than one dimension, and a field's
+        subscribed values only mean anything under its own Router's key.
+        """
+        assert self.routing is not None
+        values = self.routing.subscribe(channel)
+        return route_groups_for_router(self.routing, self.state_model.model, values)
 
     def __repr__(self):
         return f'rx.model({self.serializer!r})'

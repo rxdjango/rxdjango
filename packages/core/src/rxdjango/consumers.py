@@ -22,6 +22,40 @@ def _group_name(instance_type: str, instance_id: Any) -> str:
     return f'{_GROUP_PREFIX}{instance_type}.{instance_id}'
 
 
+def _evaluate_conditions(instance: dict[str, Any], conditions: list[list[Any]]) -> bool:
+    """Server-side mirror of the client's `evaluateConditions`
+    (`packages/react/src/membership.ts`): every condition must pass
+    (conjunction) for `instance` to qualify. Used only for the creation-drop
+    optimization (ADR-0018 design D3) -- never for security, which is the
+    dimension-group delivery itself."""
+    return all(
+        _evaluate_lookup(instance.get(column), lookup, value)
+        for column, lookup, value in conditions
+    )
+
+
+def _evaluate_lookup(field_value: Any, lookup: str, value: Any) -> bool:
+    if lookup == 'isnull':
+        return (field_value is None) == bool(value)
+    if lookup == 'exact':
+        return field_value == value
+    if lookup == 'in':
+        return isinstance(value, list) and field_value in value
+    if lookup in ('gt', 'gte', 'lt', 'lte'):
+        if field_value is None:
+            return False
+        if lookup == 'gt':
+            return field_value > value
+        if lookup == 'gte':
+            return field_value >= value
+        if lookup == 'lt':
+            return field_value < value
+        return field_value <= value
+    # Unknown/forward lookup: never match rather than risk over-relaying a
+    # row bind-time introspection would have rejected anyway.
+    return False
+
+
 class ContextConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -51,6 +85,13 @@ class ContextConsumer(AsyncWebsocketConsumer):
         # a row demoted from a list (or a superseded single-instance field)
         # stops producing frames instead of leaking a joined group forever.
         self._field_groups: dict[str, set[str]] = {}
+        # field -> its bind descriptor's `w` conditions (ADR-0018 design D3):
+        # recorded whenever a walk's anchor frame carries a `q` descriptor, so
+        # a later routed-creation event arriving through `rx_route` can be
+        # evaluated against the field's own residual conditions without
+        # re-deriving them. Only routed fields ever receive `rx.route`
+        # messages, so a static field's entry here is simply never read.
+        self._field_conditions: dict[str, list[list[Any]]] = {}
 
     async def connect(self) -> None:
         await self.accept()
@@ -145,6 +186,7 @@ class ContextConsumer(AsyncWebsocketConsumer):
                     # D1): rides the same frame as the anchor's `v`, so
                     # descriptor + membership + data arrive atomically.
                     msg['q'] = query_descriptor
+                    self._field_conditions[field] = query_descriptor.get('w', [])
                 await self.send(text_data=json.dumps(msg))
             await self._leave_stale_groups(field, walk_groups)
 
@@ -216,6 +258,33 @@ class ContextConsumer(AsyncWebsocketConsumer):
             if group in self._joined_groups:
                 await self.channel_layer.group_discard(group, self.channel_name)
                 self._joined_groups.discard(group)
+        await self.send_model_layer(field, payload)
+
+    async def rx_route(self, message: dict[str, Any]) -> None:
+        """Channel-layer handler for a routed dimension-group lifecycle event
+        (ADR-0018 design D3): a row's creation, update, or delete announced to
+        a dimension group this consumer's bind subscribed to, delivered to a
+        connection with no prior per-instance relationship to the row.
+
+        A relayed *creation* MAY be dropped when it fails the field's
+        bind-time residual conditions (`w`): safe because a row the client
+        never held needs no leave signal (list-routing: "Consumers may drop
+        residual-failing creations only"). The drop keys on the discriminator
+        the writer set (`kind`), never on heuristics -- updates and deletes
+        always relay, since a failing update frame is itself the leave
+        signal.
+        """
+        payload = message['payload']
+        kind = message.get('kind')
+        instance_type = payload.get('_type')
+        field_types = getattr(type(self.channel), '_model_field_types', {})
+        field = field_types.get(instance_type)
+        if field is None:
+            return
+        if kind == 'create':
+            conditions = self._field_conditions.get(field, [])
+            if not _evaluate_conditions(payload, conditions):
+                return
         await self.send_model_layer(field, payload)
 
     async def receive(self, text_data: str | None = None, bytes_data: bytes | None = None) -> None:

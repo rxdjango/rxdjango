@@ -111,3 +111,24 @@ class ContextChannel(metaclass=ContextChannelMeta):
 
     async def on_disconnect(self) -> None:
         pass
+
+    async def rebind(self, field_name: str) -> None:
+        """Re-run bind for one `rx.model` field (ADR-0018 design D3): re-runs
+        `subscribe()` (refreshing a routed field's dimension-group joins)
+        and re-snapshots the queryset, emitting a fresh `q` -- the client's
+        authoritative reset, for free.
+
+        Reassigns the field to `queryset.all()` rather than the stored
+        value itself: a Django `QuerySet` caches its results once evaluated
+        (`serialize_state`'s own layered walk evaluates it), so handing the
+        *same* object back to `__set__` would replay cached rows instead of
+        re-querying. `.all()` always returns a fresh, unevaluated clone of
+        the same query (mirrors `state_model._fetch_anchor_rows`'s own
+        `instance.all() if hasattr(instance, 'all') else instance`
+        convention).
+        """
+        current = getattr(self, field_name)
+        fresh = current.all() if hasattr(current, 'all') else current
+        setattr(self, field_name, fresh)
+        if self._consumer is not None:
+            await self._consumer._flush_rx()

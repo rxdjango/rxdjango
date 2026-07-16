@@ -15,10 +15,10 @@
 
 ## 3. Consumer bind and relay
 
-- [ ] 3.1 Bind of a routed field runs `subscribe(channel)`, filters `None`, joins dimension groups; stale dimension groups left on rebind/clear (extending cycle 1's per-field group bookkeeping); integration tests including two-connection isolation on different dimension values
-- [ ] 3.2 Dimension-group events relay to the client as merge frames tagged with the field; duplicate delivery through per-instance + dimension groups converges by `_v` (integration test)
-- [ ] 3.3 Creation-drop optimization: consumer drops relayed creations failing the field's residual `w`, keyed on the create/update discriminator; failing updates always relay (both directions tested)
-- [ ] 3.4 `rebind(field)` lever: re-runs subscribe, refreshes joins, re-runs the snapshot walk emitting a fresh `q`; integration test for relation-change-then-rebind
+- [x] 3.1 Bind of a routed field runs `subscribe(channel)`, filters `None`, joins dimension groups; stale dimension groups left on rebind/clear (extending cycle 1's per-field group bookkeeping); integration tests including two-connection isolation on different dimension values
+- [x] 3.2 Dimension-group events relay to the client as merge frames tagged with the field; duplicate delivery through per-instance + dimension groups converges by `_v` (integration test)
+- [x] 3.3 Creation-drop optimization: consumer drops relayed creations failing the field's residual `w`, keyed on the create/update discriminator; failing updates always relay (both directions tested)
+- [x] 3.4 `rebind(field)` lever: re-runs subscribe, refreshes joins, re-runs the snapshot walk emitting a fresh `q`; integration test for relation-change-then-rebind
 
 ## 4. Wire and client
 
