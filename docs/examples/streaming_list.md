@@ -1,0 +1,21 @@
+# Streaming list updates
+
+This example makes the delta story visible: a background timer appends one
+number to `rx[list[int]]` every tick, entirely independent of any client
+action. Each tick sends one small insert op — the wire cost never grows with
+how many items the list already holds.
+
+```{rxdemo} streaming_list
+```
+
+## Backend
+
+```{literalinclude} ../../examples/backend/streaming_list/channels.py
+:language: python
+```
+
+## Frontend
+
+```{literalinclude} ../../examples/frontend/src/app/examples/streaming_list/demo.tsx
+:language: tsx
+```

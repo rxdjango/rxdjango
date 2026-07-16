@@ -24,6 +24,8 @@ import { ScalarListPage as ExamplesScalarListPage } from './examples/scalar_list
 import { ScalarListDemo } from './examples/scalar_list/demo';
 import { ListTypesPage as ExamplesListTypesPage } from './examples/list_types/ListTypesPage';
 import { ListTypesDemo } from './examples/list_types/demo';
+import { StreamingListPage as ExamplesStreamingListPage } from './examples/streaming_list/StreamingListPage';
+import { StreamingListDemo } from './examples/streaming_list/demo';
 import { ProjectStatusPage as ProjectStatusPage } from './pages/project-status/Page';
 
 export type Page = {
@@ -49,5 +51,6 @@ export const pages: Page[] = [
   { slug: 'examples/reactive_model', title: 'Reactive model', depth: 1, parent: 'examples', Component: ExamplesReactiveModelPage, Demo: ReactiveModelDemo },
   { slug: 'examples/scalar_list', title: 'Reactive list of scalars', depth: 1, parent: 'examples', Component: ExamplesScalarListPage, Demo: ScalarListDemo },
   { slug: 'examples/list_types', title: 'Union and optional list elements', depth: 1, parent: 'examples', Component: ExamplesListTypesPage, Demo: ListTypesDemo },
+  { slug: 'examples/streaming_list', title: 'Streaming list updates', depth: 1, parent: 'examples', Component: ExamplesStreamingListPage, Demo: StreamingListDemo },
   { slug: 'project-status', title: 'Project status', depth: 0, parent: null, Component: ProjectStatusPage, Demo: null },
 ];

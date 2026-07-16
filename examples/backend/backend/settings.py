@@ -61,6 +61,7 @@ INSTALLED_APPS = [
 
     'scalar_list',
     'list_types',
+    'streaming_list',
 ]
 
 MIDDLEWARE = [

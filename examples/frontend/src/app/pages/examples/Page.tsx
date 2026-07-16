@@ -63,6 +63,11 @@ export function ExamplesPage() {
             Union and optional list elements
           </a>
         </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/streaming_list`} className="text-primary-700 hover:underline">
+            Streaming list updates
+          </a>
+        </li>
       </ul>
     </div>
   );

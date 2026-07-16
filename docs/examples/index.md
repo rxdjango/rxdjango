@@ -17,4 +17,5 @@ nested_model
 reactive_model
 scalar_list
 list_types
+streaming_list
 ```

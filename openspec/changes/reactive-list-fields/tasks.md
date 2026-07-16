@@ -47,9 +47,9 @@
 
 ## 8. Example: streaming_list (docs page + app + demo + e2e)
 
-- [ ] 8.1 Backend app `streaming_list`: background-thread timer appending to `rx[list[int]]` (reactive_model's thread pattern)
-- [ ] 8.2 Docs page + demo + `make extract` + `makefrontend`
-- [ ] 8.3 Playwright e2e: items arrive one at a time without reload
+- [x] 8.1 Backend app `streaming_list`: background timer appending to `rx[list[int]]` (asyncio.Task on the consumer's own loop, not a real OS thread — see deviation note below)
+- [x] 8.2 Docs page + demo + `make extract` + `makefrontend`
+- [x] 8.3 Playwright e2e: items arrive one at a time without reload
 
 ## 9. Wrap-up
 
