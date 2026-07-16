@@ -80,24 +80,36 @@ The example pages shown in `examples/frontend/` are *generated* from the MyST do
 
 ## Running tests
 
-The test suite is the Django suite under `examples/backend`, run with Django's
-own test runner:
+There are three test tiers; a full verification runs all of them.
+
+**Python unit suites** (pytest, configured at the repo root — `testpaths`
+covers `packages/core/tests` and `packages/model/tests`; the example apps
+and the `rxdjango-0` reference checkout are excluded):
+
+```bash
+uv run pytest
+```
+
+**The Django suite** under `examples/backend` (integration, protocol,
+makefrontend, and e2e), run with Django's own test runner:
 
 ```bash
 cd examples/backend && uv run ./manage.py test
 ```
 
-This runs 49 tests (integration, protocol, makefrontend, and e2e). Two
-prerequisites:
+Two prerequisites:
 
 - **Node toolchain on PATH** — the integration suite builds `packages/react`
   via `npm run build` on first run, so `npm` and `node` must be available.
 - **Playwright browser** — the e2e tests drive a real browser. Install it once
-  with `uv run playwright install chromium` from the repo root, or the 8 e2e
+  with `uv run playwright install chromium` from the repo root, or the e2e
   tests error out with a missing-browser-runtime message.
 
-> Note: there is currently no pytest suite for the `rxdjango` core package, and
-> no pytest config at the repo root. Running a bare `uv run pytest` fails during
-> collection (it tries to import the Django example apps and the `rxdjango-0`
-> reference checkout without `DJANGO_SETTINGS_MODULE`). Use the Django runner
-> above.
+**TypeScript client tests** (vitest):
+
+```bash
+cd packages/react && npm test
+```
+
+Don't pin test counts in this file — they change with every feature; the
+suites report their own totals.
