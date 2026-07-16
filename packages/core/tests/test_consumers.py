@@ -33,10 +33,55 @@ class EchoChannel(ContextChannel):
         return self.kwargs
 
 
+class ListEchoChannel(ContextChannel):
+    """Exercises the `o`-slot wire shape (ADR-0017) end to end over a real
+    WebsocketCommunicator."""
+
+    items = rx[list[int]]([1, 2, 3])
+
+    @action
+    async def do_append(self, value: int):
+        self.items.append(value)
+
+    @action
+    async def do_insert(self, index: int, value: int):
+        self.items.insert(index, value)
+
+    @action
+    async def do_set(self, index: int, value: int):
+        self.items[index] = value
+
+    @action
+    async def do_delete(self, index: int):
+        del self.items[index]
+
+    @action
+    async def do_pop(self):
+        return self.items.pop()
+
+    @action
+    async def do_remove(self, value: int):
+        self.items.remove(value)
+
+    @action
+    async def do_replace(self):
+        self.items = [9, 8]
+
+    @action
+    async def do_burst(self):
+        # Interleaved insert/set/delete in one action: frames must arrive in
+        # mutation order.
+        self.items.append(4)      # [1, 2, 3, 4]
+        self.items.insert(0, -1)  # [-1, 1, 2, 3, 4]
+        self.items[1] = 99        # [-1, 99, 2, 3, 4]
+        del self.items[-1]        # [-1, 99, 2, 3]
+
+
 def make_communicator(path='/ws/echo/'):
     app = URLRouter([
         re_path(r'^ws/echo/$', EchoChannel.as_asgi()),
         re_path(r'^ws/room/(?P<room>\w+)/$', EchoChannel.as_asgi()),
+        re_path(r'^ws/list-echo/$', ListEchoChannel.as_asgi()),
     ])
     return WebsocketCommunicator(app, path)
 
@@ -75,6 +120,109 @@ async def test_rx_frames_flushed_after_action_in_order():
     }
     assert await comm.receive_json_from(timeout=1) == {
         't': 'rx', 'f': 'label', 'v': 'bumped 3',
+    }
+    await comm.disconnect()
+
+
+async def connect_list_echo():
+    comm = make_communicator('/ws/list-echo/')
+    connected, _ = await comm.connect()
+    assert connected
+    ready = await comm.receive_json_from(timeout=1)
+    return comm, ready
+
+
+async def test_append_emits_insert_op_frame():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_append', 'p': [4]})
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'ac', 'id': '1', 'r': None, 'e': 0,
+    }
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'i', 'v': [3, 4],
+    }
+    await comm.disconnect()
+
+
+async def test_insert_emits_insert_op_frame_at_normalized_index():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_insert', 'p': [0, 9]})
+    await comm.receive_json_from(timeout=1)  # ac response
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'i', 'v': [0, 9],
+    }
+    await comm.disconnect()
+
+
+async def test_set_emits_set_op_frame():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_set', 'p': [0, 9]})
+    await comm.receive_json_from(timeout=1)
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 's', 'v': [0, 9],
+    }
+    await comm.disconnect()
+
+
+async def test_delete_emits_delete_op_frame_with_bare_index():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_delete', 'p': [1]})
+    await comm.receive_json_from(timeout=1)
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'd', 'v': 1,
+    }
+    await comm.disconnect()
+
+
+async def test_pop_emits_delete_op_frame():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_pop', 'p': []})
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'ac', 'id': '1', 'r': 3, 'e': 0,
+    }
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'd', 'v': 2,
+    }
+    await comm.disconnect()
+
+
+async def test_remove_emits_delete_op_frame():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_remove', 'p': [2]})
+    await comm.receive_json_from(timeout=1)
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'd', 'v': 1,
+    }
+    await comm.disconnect()
+
+
+async def test_reassignment_sends_plain_frame_with_no_o_key():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_replace', 'p': []})
+    await comm.receive_json_from(timeout=1)
+    frame = await comm.receive_json_from(timeout=1)
+    assert frame == {'t': 'rx', 'f': 'items', 'v': [9, 8]}
+    assert 'o' not in frame
+    await comm.disconnect()
+
+
+async def test_burst_of_ops_flushes_in_mutation_order_after_ac():
+    comm, _ = await connect_list_echo()
+    await comm.send_json_to({'t': 'ac', 'id': '1', 'a': 'do_burst', 'p': []})
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'ac', 'id': '1', 'r': None, 'e': 0,
+    }
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'i', 'v': [3, 4],
+    }
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'i', 'v': [0, -1],
+    }
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 's', 'v': [1, 99],
+    }
+    assert await comm.receive_json_from(timeout=1) == {
+        't': 'rx', 'f': 'items', 'o': 'd', 'v': 4,
     }
     await comm.disconnect()
 

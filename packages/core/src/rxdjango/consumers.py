@@ -10,7 +10,7 @@ from .actions import execute_action
 from .exceptions import ForbiddenError, InvalidMessageReceived
 
 
-PROTOCOL_VERSION = '0.1.0'
+PROTOCOL_VERSION = '0.2.0'
 
 # Reactive broadcast group prefix. Kept in sync with
 # rxdjango_model.reactive_registry.GROUP_PREFIX; core declares its own copy so
@@ -60,12 +60,22 @@ class ContextConsumer(AsyncWebsocketConsumer):
             'protocol': PROTOCOL_VERSION,
         }))
 
-    def enqueue_rx(self, field: str, value: Any) -> None:
+    def enqueue_rx(self, field: str, value: Any, op: str | None = None) -> None:
         """Queue a plain rx update (or a model field's ``v: null`` clear) for
         the client. Model-field layer frames go through
         ``deposit_model_walk`` instead, since those carry per-layer group
-        joins that must happen before each frame, not in a batch."""
-        self._pending_rx.append({'t': 'rx', 'f': field, 'v': value})
+        joins that must happen before each frame, not in a batch.
+
+        ``op`` (ADR-0017), when given, is one of ``"i"``/``"s"``/``"d"`` — a
+        list delta operation riding the frame's ``o`` slot, with ``value`` as
+        the operation's operand (``[index, value]`` for insert/set, a bare
+        index for delete). Omitting it (the default) sends a plain
+        whole-value frame, exactly as before.
+        """
+        msg: dict[str, Any] = {'t': 'rx', 'f': field, 'v': value}
+        if op is not None:
+            msg['o'] = op
+        self._pending_rx.append(msg)
 
     def deposit_model_walk(self, field: str, walk: Any) -> None:
         """Deposit (or clear, via ``walk=None``) a field's pending layered

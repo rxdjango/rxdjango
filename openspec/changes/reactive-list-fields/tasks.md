@@ -10,9 +10,9 @@
 
 ## 2. Wire emission (`packages/core/src/rxdjango/consumers.py`, `channels.py`)
 
-- [ ] 2.1 Extend the rx push path to carry an optional op: `o` ∈ `i`/`s`/`d` with `v` as `[index, value]` or bare index; replace stays a plain frame
-- [ ] 2.2 Bump the protocol version constant to `0.2.0` (server side)
-- [ ] 2.3 Protocol tests: wire-shape asserts for append/insert/set/del/pop/remove (op frames, canonical indices) and reassignment (no `o`); flush-after-`ac` ordering holds for op frames
+- [x] 2.1 Extend the rx push path to carry an optional op: `o` ∈ `i`/`s`/`d` with `v` as `[index, value]` or bare index; replace stays a plain frame
+- [x] 2.2 Bump the protocol version constant to `0.2.0` (server side)
+- [x] 2.3 Protocol tests: wire-shape asserts for append/insert/set/del/pop/remove (op frames, canonical indices) and reassignment (no `o`); flush-after-`ac` ordering holds for op frames
 
 ## 3. Client runtime (`packages/react/src/`)
 
