@@ -178,7 +178,7 @@ def test_unsupported_lookup_rejected_naming_it(task_state_model):
 
 
 def test_joined_column_rejected_naming_the_relation(employee_state_model):
-    with pytest.raises(UnsupportedQuerysetError, match='traverses a relation'):
+    with pytest.raises(UnsupportedQuerysetError, match="'team__name'"):
         introspect_queryset(
             Employee.objects.filter(team__name='Platform'), employee_state_model,
         )

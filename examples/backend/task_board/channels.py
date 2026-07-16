@@ -9,7 +9,7 @@ class TaskBoardChannel(ContextChannel):
     `routing='project_id'`, so it is *live* -- a task created under, or
     moved into, the connected project's `project_id` appears with no rebind,
     and a task moved out disappears just as live. Contrast with
-    `static_list.StaticListChannel`, whose `tasks` field has no `routing=`
+    `static_queryset.StaticQuerysetChannel`, whose `tasks` field has no `routing=`
     and therefore never sees a new row until `rebind()` is called.
 
     `select_project` is a client action rather than a URL parameter: the

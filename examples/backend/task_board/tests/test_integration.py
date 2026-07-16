@@ -1,7 +1,7 @@
 """Integration tests for the routed-list-delivery example app
 (routed-list-delivery tasks 5.1/5.3): `TaskBoardChannel.tasks` declares
 `routing='project_id'`, so a task's creation and any dimension move
-deliver live -- no rebind, unlike `static_list`.
+deliver live -- no rebind, unlike `static_queryset`.
 """
 
 from __future__ import annotations

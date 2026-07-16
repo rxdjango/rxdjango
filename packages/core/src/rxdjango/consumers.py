@@ -92,6 +92,14 @@ class ContextConsumer(AsyncWebsocketConsumer):
         # re-deriving them. Only routed fields ever receive `rx.route`
         # messages, so a static field's entry here is simply never read.
         self._field_conditions: dict[str, list[list[Any]]] = {}
+        # Set once the socket is (being) closed, so an action that closes its
+        # own connection (or a disconnect racing an in-flight action) doesn't
+        # have its response/flush sent on a closed protocol.
+        self._closed = False
+
+    async def close(self, code: Any = None, reason: Any = None) -> None:
+        self._closed = True
+        await super().close(code)
 
     async def connect(self) -> None:
         await self.accept()
@@ -308,6 +316,7 @@ class ContextConsumer(AsyncWebsocketConsumer):
                 raise InvalidMessageReceived(f'Type "{typ}" not valid')
 
     async def disconnect(self, close_code: int | None = None) -> None:
+        self._closed = True
         if self.channel_layer is not None:
             while self._joined_groups:
                 group = self._joined_groups.pop()
@@ -342,6 +351,8 @@ class ContextConsumer(AsyncWebsocketConsumer):
         try:
             result = await execute_action(self.channel, method_name, params)
         except ForbiddenError as e:
+            if self._closed:
+                return
             await self.send(text_data=json.dumps({
                 't': 'ac',
                 'id': call_id,
@@ -349,13 +360,18 @@ class ContextConsumer(AsyncWebsocketConsumer):
             }))
             return
         except Exception as e:
-            await self.send(text_data=json.dumps({
-                't': 'ac',
-                'id': call_id,
-                'e': [getattr(e, 'code', 500), str(e) or type(e).__name__],
-            }))
+            if not self._closed:
+                await self.send(text_data=json.dumps({
+                    't': 'ac',
+                    'id': call_id,
+                    'e': [getattr(e, 'code', 500), str(e) or type(e).__name__],
+                }))
             raise
 
+        if self._closed:
+            # The action closed its own connection (e.g. a forced disconnect):
+            # there is no protocol left to carry the response.
+            return
         await self.send(text_data=json.dumps({
             't': 'ac',
             'id': call_id,

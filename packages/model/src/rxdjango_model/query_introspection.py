@@ -115,9 +115,10 @@ def _condition_from_lookup(lookup, query, state_model) -> tuple[str, str, Any]:
     base_alias = query.get_initial_alias()
     if lhs.alias is not None and lhs.alias != base_alias:
         raise UnsupportedQuerysetError(
-            f"queryset condition on {lhs.target.name!r} traverses a relation "
-            "(joined column); only conditions on the anchor serializer's own "
-            "fields are supported for a static list (ADR-0019)"
+            f"queryset condition on {_joined_path(query, lhs)!r} traverses a "
+            "relation (joined column); only conditions on the anchor "
+            "serializer's own fields are supported for a queryset list "
+            "(ADR-0019)"
         )
 
     column = lhs.target.name
@@ -130,6 +131,23 @@ def _condition_from_lookup(lookup, query, state_model) -> tuple[str, str, Any]:
 
     value = _serialize_value(ts_field, lookup_name, lookup.rhs, column)
     return (column, lookup_name, value)
+
+
+def _joined_path(query, col) -> str:
+    # Rebuild the developer's `a__b__c` spelling from the join chain, so the
+    # bind error names the condition as it was written, not its far-side
+    # column.
+    parts = [col.target.name]
+    alias = col.alias
+    base_alias = query.get_initial_alias()
+    while alias and alias != base_alias:
+        join = query.alias_map.get(alias)
+        join_field = getattr(join, 'join_field', None)
+        if join_field is None:
+            break
+        parts.insert(0, join_field.name)
+        alias = getattr(join, 'parent_alias', None)
+    return '__'.join(parts)
 
 
 def _walk_order_by(query, state_model) -> list[str]:
