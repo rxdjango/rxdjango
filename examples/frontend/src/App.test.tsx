@@ -2,9 +2,9 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders overview copy', () => {
+test('renders home pitch', () => {
   render(<App />);
   expect(
-    screen.getByText(/RxDjango demo/i),
+    screen.getByText(/typed React SDK/i),
   ).toBeInTheDocument();
 });

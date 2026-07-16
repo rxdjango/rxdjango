@@ -130,6 +130,14 @@ export function Main() {
             );
           })}
         </nav>
+        <div className="border-t border-ink/68 px-4 py-3">
+          <a
+            href="https://github.com/rxdjango/rxdjango"
+            className="text-sm font-medium text-primary-700 hover:underline"
+          >
+            GitHub
+          </a>
+        </div>
       </aside>
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-primary-100/50">
         {ActiveComponent == null ? (
@@ -139,9 +147,33 @@ export function Main() {
                 RxDjango
               </h1>
               <p className="mt-4 max-w-prose text-base leading-relaxed text-primary-800">
-                A reactive layer for Django that keeps a TypeScript UI in
-                sync with the server through typed channels. Pick a page
-                from the sidebar to start.
+                Declare reactive state on a Django channel, and a typed
+                React SDK is generated from it — state stays in sync over
+                WebSocket, with no consumers, fetchers, or stores to write.
+              </p>
+              <p className="mt-3 max-w-prose text-base leading-relaxed text-primary-800">
+                Start with the{' '}
+                <a
+                  href={withBasename('/quickstart')}
+                  className="text-primary-700 hover:underline"
+                >
+                  Quickstart
+                </a>
+                , explore the live{' '}
+                <a
+                  href={withBasename('/examples')}
+                  className="text-primary-700 hover:underline"
+                >
+                  Examples
+                </a>
+                , or read the source on{' '}
+                <a
+                  href="https://github.com/rxdjango/rxdjango"
+                  className="text-primary-700 hover:underline"
+                >
+                  GitHub
+                </a>
+                .
               </p>
             </div>
           </div>
