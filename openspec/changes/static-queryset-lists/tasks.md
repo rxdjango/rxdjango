@@ -37,5 +37,5 @@
 
 ## 7. Wrap-up
 
-- [ ] 7.1 All three test tiers green: `uv run pytest`, `cd examples/backend && uv run ./manage.py test`, `cd packages/react && npm test`
-- [ ] 7.2 Update `docs/issues.md` if any known inconsistency is affected; verify no doc claims routed delivery exists yet
+- [x] 7.1 All three test tiers green: `uv run pytest`, `cd examples/backend && uv run ./manage.py test`, `cd packages/react && npm test`
+- [x] 7.2 Update `docs/issues.md` if any known inconsistency is affected; verify no doc claims routed delivery exists yet
