@@ -73,6 +73,53 @@ describe("evaluateConditions: gte on ISO-8601 datetime strings (design D3)", () 
   });
 });
 
+// Datetime lookup parity under mixed UTC offsets (DST transitions, or a
+// bind-time value serialized with a different offset than a live row's):
+// two representations of the same instant must compare equal, and ordering
+// must follow the instant, not the string.
+describe("evaluateConditions: exact/gte on mixed-offset ISO-8601 datetime strings", () => {
+  it("exact treats two offset spellings of the same instant as equal", () => {
+    expect(evaluateConditions(
+      { created_at: "2026-07-16T12:00:00+02:00" },
+      [["created_at", "exact", "2026-07-16T10:00:00Z"]],
+    )).toBe(true);
+  });
+
+  it("exact still rejects two offset spellings of different instants", () => {
+    expect(evaluateConditions(
+      { created_at: "2026-07-16T12:00:01+02:00" },
+      [["created_at", "exact", "2026-07-16T10:00:00Z"]],
+    )).toBe(false);
+  });
+
+  it("gte agrees on a boundary match across differing offsets", () => {
+    expect(evaluateConditions(
+      { created_at: "2026-07-16T12:00:00+02:00" },
+      [["created_at", "gte", "2026-07-16T10:00:00Z"]],
+    )).toBe(true);
+  });
+
+  it("gt/lt order by instant, not by the offset-shifted string", () => {
+    // Lexicographically "+02:00" < "Z" would flip this verdict if compared
+    // as strings; as instants, 12:00+02:00 (10:00Z) is NOT after 10:30Z.
+    expect(evaluateConditions(
+      { created_at: "2026-07-16T12:00:00+02:00" },
+      [["created_at", "gt", "2026-07-16T10:30:00Z"]],
+    )).toBe(false);
+    expect(evaluateConditions(
+      { created_at: "2026-07-16T13:00:00+02:00" },
+      [["created_at", "gt", "2026-07-16T10:30:00Z"]],
+    )).toBe(true);
+  });
+
+  it("a naive (offset-less) datetime string still compares lexicographically", () => {
+    expect(evaluateConditions(
+      { created_at: "2026-07-16T10:00:00" },
+      [["created_at", "exact", "2026-07-16T10:00:00"]],
+    )).toBe(true);
+  });
+});
+
 describe("evaluateConditions: isnull", () => {
   it("isnull=true matches null and undefined", () => {
     expect(evaluateConditions({ team: null }, [["team", "isnull", true]])).toBe(true);
@@ -146,6 +193,21 @@ describe("compareByOrdering", () => {
       { created_at: "2026-07-16T10:00:00Z" },
       ["created_at"],
     )).toBeLessThan(0);
+  });
+
+  it("orders ISO-8601 datetime strings by instant across differing offsets", () => {
+    // Lexicographically "+02:00" < "Z", which would (wrongly) order the
+    // 13:00+02:00 row (11:00Z) before 10:00Z if compared as strings.
+    expect(compareByOrdering(
+      { created_at: "2026-07-16T13:00:00+02:00" },
+      { created_at: "2026-07-16T10:00:00Z" },
+      ["created_at"],
+    )).toBeGreaterThan(0);
+    expect(compareByOrdering(
+      { created_at: "2026-07-16T12:00:00+02:00" },
+      { created_at: "2026-07-16T10:00:00Z" },
+      ["created_at"],
+    )).toBe(0);
   });
 
   it("nulls sort first ascending, last descending", () => {

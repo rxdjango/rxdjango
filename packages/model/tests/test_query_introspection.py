@@ -6,6 +6,8 @@ offending condition -- every shape design D3 does not support.
 """
 from __future__ import annotations
 
+import datetime
+
 import pytest
 from django.utils import timezone
 from rest_framework import serializers
@@ -95,6 +97,24 @@ def test_datetime_value_serializes_exactly_as_drf_renders_the_field(task_state_m
         Task.objects.filter(created_at__gte=now), task_state_model,
     )
     expected = TaskSerializer().fields['created_at'].to_representation(now)
+    assert descriptor.to_wire()['w'] == [['created_at', 'gte', expected]]
+    assert isinstance(expected, str)
+
+
+def test_datetime_value_under_a_non_utc_offset_matches_drfs_own_rendering(task_state_model):
+    """Lookup parity (gap 2): a timezone-aware bind-time value carrying a
+    non-UTC offset must still emit through the *same* `to_representation`
+    call the live-row serializer uses -- never a bare `.isoformat()`/`repr()`
+    that could drift from DRF's own rendering (e.g. a different offset
+    format, or a naive/aware inconsistency) and break the client's
+    string-vs-instant comparison (design D3)."""
+    aware_non_utc = datetime.datetime(
+        2026, 7, 16, 12, 30, 0, tzinfo=timezone.get_fixed_timezone(120),
+    )
+    descriptor = introspect_queryset(
+        Task.objects.filter(created_at__gte=aware_non_utc), task_state_model,
+    )
+    expected = TaskSerializer().fields['created_at'].to_representation(aware_non_utc)
     assert descriptor.to_wire()['w'] == [['created_at', 'gte', expected]]
     assert isinstance(expected, str)
 

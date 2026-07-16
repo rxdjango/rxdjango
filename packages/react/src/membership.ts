@@ -5,11 +5,38 @@
  * supported lookups on the server.
  *
  * A datetime condition value is DRF's ISO-8601 rendering of the field
- * (design D3), so `gt`/`gte`/`lt`/`lte` against it is a plain string
- * comparison -- correct as long as every datetime on the wire is rendered
- * with a uniform offset, which is a deployment-level assumption this module
- * does not itself verify.
+ * (design D3). Two renderings of the same instant can carry different UTC
+ * offsets (a DST transition, or a bind-time value serialized under a
+ * different offset than a live row's), so `exact`/`gt`/`gte`/`lt`/`lte`
+ * against a pair of ISO-8601 date-time strings compares them as instants
+ * (epoch millis via `Date.parse`), not lexicographically. A datetime string
+ * with no explicit offset (a naive value, or a plain date/time string) has
+ * no cross-offset ambiguity to begin with, so it -- like every other
+ * string -- still compares lexicographically.
  */
+
+/** Strict ISO-8601 date-time detection, offset required: only a value that
+ * *carries* a UTC offset (`Z` or `±HH:MM`/`±HHMM`) can disagree with another
+ * rendering of the same instant, which is the only case that needs instant
+ * comparison instead of lexicographic. */
+const ISO_DATETIME_WITH_OFFSET_RE =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/;
+
+function isIsoDateTimeWithOffset(value: unknown): value is string {
+  return typeof value === 'string' && ISO_DATETIME_WITH_OFFSET_RE.test(value);
+}
+
+/** `Date.parse` of both operands when both are offset-bearing ISO-8601
+ * date-time strings representing the same kind of value; `null` when the
+ * instant comparison doesn't apply (fall back to the caller's normal
+ * comparison). */
+function parseAsInstants(a: unknown, b: unknown): [number, number] | null {
+  if (!isIsoDateTimeWithOffset(a) || !isIsoDateTimeWithOffset(b)) return null;
+  const parsedA = Date.parse(a);
+  const parsedB = Date.parse(b);
+  if (Number.isNaN(parsedA) || Number.isNaN(parsedB)) return null;
+  return [parsedA, parsedB];
+}
 
 /** One introspected `(column, lookup, value)` condition, wire shape per
  * `wire-protocol`'s `q` slot. */
@@ -44,8 +71,11 @@ function evaluateLookup(fieldValue: unknown, lookup: string, value: unknown): bo
   switch (lookup) {
     case 'isnull':
       return (fieldValue === null || fieldValue === undefined) === (value as boolean);
-    case 'exact':
+    case 'exact': {
+      const instants = parseAsInstants(fieldValue, value);
+      if (instants !== null) return instants[0] === instants[1];
       return fieldValue === value;
+    }
     case 'in':
       return Array.isArray(value) && (value as unknown[]).includes(fieldValue);
     case 'gt':
@@ -65,8 +95,9 @@ function evaluateLookup(fieldValue: unknown, lookup: string, value: unknown): bo
 }
 
 function compareLookup(lookup: string, fieldValue: unknown, value: unknown): boolean {
-  const a = fieldValue as number | string;
-  const b = value as number | string;
+  const instants = parseAsInstants(fieldValue, value);
+  const a = instants !== null ? instants[0] : (fieldValue as number | string);
+  const b = instants !== null ? instants[1] : (value as number | string);
   switch (lookup) {
     case 'gt': return a > b;
     case 'gte': return a >= b;
@@ -98,8 +129,9 @@ function compareColumn(av: unknown, bv: unknown): number {
   if (av === bv) return 0;
   if (av === null || av === undefined) return -1;
   if (bv === null || bv === undefined) return 1;
-  const a = av as number | string;
-  const b = bv as number | string;
+  const instants = parseAsInstants(av, bv);
+  const a = instants !== null ? instants[0] : (av as number | string);
+  const b = instants !== null ? instants[1] : (bv as number | string);
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
