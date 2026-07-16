@@ -13,7 +13,8 @@ exclude_patterns = [
     '_build', 'Thumbs.db', '.DS_Store',
     'adr', 'rfcs', 'dev', 'drafts',
     # Loose drafts not yet linked from the root toctree.
-    '01-static-rx-push.md', 'issues.md', 'rxdjango-spec.md',
+    '01-static-rx-push.md', '02-unloaded-placeholders.md',
+    'issues.md', 'rxdjango-spec.md',
 ]
 
 html_theme = 'basic'
