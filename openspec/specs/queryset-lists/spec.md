@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The static tier of the queryset list architecture (ADR-0019; ADR-0018's "omitted routing = static list"): a `many=True` `rx.model` field bound to a plain Django queryset, snapshotted through the layered walk, with membership derived client-side from a bind descriptor. Updates and deletes to known rows flow through existing per-instance machinery; rows created after the snapshot appear only on rebind. The routed tier (Routers, live new-row delivery) is a future change.
+The static tier of the queryset list architecture (ADR-0019; ADR-0018's "omitted routing = static list"): a `many=True` `rx.model` field bound to a plain Django queryset, snapshotted through the layered walk, with membership derived client-side from a bind descriptor. Updates and deletes to known rows flow through existing per-instance machinery; without routing, rows created after the snapshot appear only on rebind. With a `routing` declaration (see `list-routing`) the list is live: lifecycle events delivered through dimension groups enter and leave it as they happen.
 
 ## Requirements
 
@@ -11,10 +11,13 @@ The static tier of the queryset list architecture (ADR-0019; ADR-0018's "omitted
 The developer surface for a list SHALL be exactly ADR-0019's interface: a
 plain Django queryset assigned to a `many=True` `rx.model` field in
 `on_connect`. No declaration language, no new verbs. Reassignment
-supersedes per `model-state`'s existing semantics. Without a routing
-declaration the field is a **static list** (ADR-0018): snapshot plus
-updates and deletes to known rows; rows created after the snapshot do not
-appear until a rebind.
+supersedes per `model-state`'s existing semantics. The field's `routing`
+declaration (per `list-routing`) selects the tier: without routing the
+field is a **static list** (ADR-0018) — snapshot plus updates and deletes
+to known rows; rows created after the snapshot do not appear until a
+rebind — while with routing the field is **live**: lifecycle events
+delivered through the Router's dimension groups enter and leave the list
+as they happen.
 
 #### Scenario: Bare queryset binds
 
@@ -23,8 +26,34 @@ appear until a rebind.
 
 #### Scenario: New row does not appear in a static list
 
-- **WHEN** a row matching the queryset's conditions is created after the snapshot
+- **WHEN** a row matching the queryset's conditions is created after the snapshot and the field declares no routing
 - **THEN** the connected client's list is unchanged until the field is rebound
+
+### Requirement: Routed lists grow membership from qualifying events
+
+For a live (routed) field, the membership basis SHALL grow client-side:
+a full-layer anchor row arriving on the field and passing the
+descriptor's conditions joins the basis and the derived list, positioned
+by the ordering spec. The leave edge needs no new machinery — the
+old-side update frame delivered by `publish(old)` fails the conditions
+and drops the row through the existing derivation. Static fields keep
+the never-grow rule. Rebind-authoritative reset and watermark semantics
+apply to both tiers unchanged.
+
+#### Scenario: Created row appears live
+
+- **WHEN** a routed list is bound and a row passing its conditions is created
+- **THEN** the row's full layer arrives and the derived list gains the row at its ordered position, with no rebind
+
+#### Scenario: Row leaves when routed out
+
+- **WHEN** a member row's update moves it out of the connection's dimension value (e.g. `project_id` 5 → 7) and the queryset filters on that column
+- **THEN** the old-side update frame fails the conditions and the row leaves the derived list
+
+#### Scenario: Connections on different dimension values stay isolated
+
+- **WHEN** two connections bind the same routed field with different subscribe values
+- **THEN** a creation announces only to the matching connection's list; the other connection receives nothing
 
 ### Requirement: Bind-time introspection validates conditions and ordering
 
