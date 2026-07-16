@@ -7,8 +7,11 @@ class FakeConsumer:
     def __init__(self):
         self.messages = []
 
-    def enqueue_rx(self, field, value):
-        self.messages.append((field, value))
+    def enqueue_rx(self, field, value, op=None):
+        if op is None:
+            self.messages.append((field, value))
+        else:
+            self.messages.append((field, value, op))
 
 
 @pytest.fixture
