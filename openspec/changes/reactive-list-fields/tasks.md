@@ -16,9 +16,9 @@
 
 ## 3. Client runtime (`packages/react/src/`)
 
-- [ ] 3.1 Apply `o` frames in the channel runtime: `Array.isArray` gate, positional apply, new array identity per frame, publish per frame; discard `o` frames for non-array fields
-- [ ] 3.2 Bump the client protocol version constant to `0.2.0`
-- [ ] 3.3 TS unit tests: streamed appends, mixed burst convergence, replace-after-ops, `o`-on-non-list discarded
+- [x] 3.1 Apply `o` frames in the channel runtime: `Array.isArray` gate, positional apply, new array identity per frame, publish per frame; discard `o` frames for non-array fields
+- [x] 3.2 Bump the client protocol version constant to `0.2.0`
+- [x] 3.3 TS unit tests: streamed appends, mixed burst convergence, replace-after-ops, `o`-on-non-list discarded
 
 ## 4. Codegen (`packages/core/src/rxdjango/ts/channels.py`)
 

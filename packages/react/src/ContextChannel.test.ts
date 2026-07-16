@@ -138,6 +138,68 @@ describe("ContextChannel", () => {
     expect(channel.user).toBeNull();
   });
 
+  it("applies streamed insert ops, growing the array in order", async () => {
+    const { channel, ws } = subscribedChannel();
+    ws.message({ t: "rx", f: "counter", v: [] });
+    await tick();
+    const first = channel.counter as unknown as number[];
+
+    ws.message({ t: "rx", f: "counter", o: "i", v: [0, 1] });
+    await tick();
+    const second = channel.counter as unknown as number[];
+    expect(second).toEqual([1]);
+    expect(second).not.toBe(first);
+
+    ws.message({ t: "rx", f: "counter", o: "i", v: [1, 2] });
+    await tick();
+    ws.message({ t: "rx", f: "counter", o: "i", v: [2, 3] });
+    await tick();
+
+    expect(channel.counter).toEqual([1, 2, 3]);
+  });
+
+  it("converges a mixed insert/set/delete burst to the server's list", async () => {
+    const { channel, ws } = subscribedChannel();
+    ws.message({ t: "rx", f: "counter", v: [1, 2, 3] });
+    await tick();
+
+    ws.message({ t: "rx", f: "counter", o: "i", v: [3, 4] });
+    await tick();
+    ws.message({ t: "rx", f: "counter", o: "i", v: [0, -1] });
+    await tick();
+    ws.message({ t: "rx", f: "counter", o: "s", v: [1, 99] });
+    await tick();
+    ws.message({ t: "rx", f: "counter", o: "d", v: 4 });
+    await tick();
+
+    expect(channel.counter).toEqual([-1, 99, 2, 3]);
+  });
+
+  it("replace after ops resets the array to exactly the frame's value", async () => {
+    const { channel, ws } = subscribedChannel();
+    ws.message({ t: "rx", f: "counter", v: [1, 2, 3] });
+    await tick();
+    ws.message({ t: "rx", f: "counter", o: "i", v: [3, 4] });
+    await tick();
+    expect(channel.counter).toEqual([1, 2, 3, 4]);
+
+    ws.message({ t: "rx", f: "counter", v: [9, 8] });
+    await tick();
+
+    expect(channel.counter).toEqual([9, 8]);
+  });
+
+  it("discards an o frame for a field whose current value isn't an array", async () => {
+    const { channel, ws } = subscribedChannel();
+    ws.message({ t: "rx", f: "counter", v: 41 });
+    await tick();
+
+    ws.message({ t: "rx", f: "counter", o: "i", v: [0, 1] });
+    await tick();
+
+    expect(channel.counter).toBe(41);
+  });
+
   it("resolves actions with the response payload", async () => {
     const { channel, ws } = subscribedChannel();
     ws.open();

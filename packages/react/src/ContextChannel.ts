@@ -113,6 +113,14 @@ export abstract class ContextChannel<T = unknown> {
         return;
       case "rx": {
         const field = msg.f as string;
+        const op = msg.o as string | undefined;
+        if (op !== undefined) {
+          // List delta operation (ADR-0017): `v` is the op's operand, not a
+          // full value. Applied positionally, in arrival order.
+          this._applyListOp(field, op, msg.v);
+          this._notify();
+          return;
+        }
         if ("v" in msg) {
           const descriptor = this._modelFields[field];
           if (descriptor !== undefined) {
@@ -162,6 +170,44 @@ export abstract class ContextChannel<T = unknown> {
       this._sendQueue.push(payload);
     }
     return promise;
+  }
+
+  /**
+   * Apply a list delta operation (ADR-0017) to `field` in place, publishing
+   * a new array identity so React re-renders. Ops are exclusive to list
+   * fields (wire-protocol): if the field's current value isn't an array —
+   * e.g. it's still `null` on an optional list, or the op arrived for a
+   * non-list field entirely — the frame is discarded per the wire spec (D4).
+   */
+  private _applyListOp(field: string, op: string, operand: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const current = (this as any)[field];
+    if (!Array.isArray(current)) {
+      return;
+    }
+    const next = current.slice();
+    switch (op) {
+      case "i": {
+        const [index, value] = operand as [number, unknown];
+        next.splice(index, 0, value);
+        break;
+      }
+      case "s": {
+        const [index, value] = operand as [number, unknown];
+        next[index] = value;
+        break;
+      }
+      case "d": {
+        const index = operand as number;
+        next.splice(index, 1);
+        break;
+      }
+      default:
+        // Unknown op: forward-compatibility posture — ignore silently.
+        return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this as any)[field] = next;
   }
 
   private _rebuildModelField(
