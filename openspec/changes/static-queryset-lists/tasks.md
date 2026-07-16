@@ -26,8 +26,8 @@
 
 ## 5. Codegen
 
-- [ ] 5.1 Generate `T[] | null` channel properties for `many=True` fields, initialized `null`; `_modelFields` marks list anchors; makefrontend tests
-- [ ] 5.2 `make check` passes (docgen + `tsc --noEmit`) with a generated list channel in the examples
+- [x] 5.1 Generate `T[] | null` channel properties for `many=True` fields, initialized `null`; `_modelFields` marks list anchors; makefrontend tests
+- [ ] 5.2 `make check` passes (docgen + `tsc --noEmit`) with a generated list channel in the examples (verified once the example app in group 6 exists; `make check` already passes against the pre-existing example apps as of this commit)
 
 ## 6. Example app and e2e
 

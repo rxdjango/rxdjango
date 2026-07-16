@@ -29,7 +29,10 @@ def resolve_channel_extras(channel_cls):
     """Emit a ``_modelFields`` map for each rx.model field on the channel.
 
     The frontend ``StateBuilder`` uses this map to rebuild a nested instance
-    from the flat array of layers sent over the wire.
+    from the flat array of layers sent over the wire. A ``many=True`` field
+    additionally carries ``many: true`` (design D6), which the runtime uses
+    to route the field through membership derivation instead of the
+    single-anchor rebuild.
     """
     entries = []
     for field_name, rx_field in channel_cls._rx_fields.items():
@@ -42,6 +45,7 @@ def resolve_channel_extras(channel_cls):
             field_name,
             state_model.instance_type,
             state_model.frontend_model(),
+            rx_field.many,
         ))
     if not entries:
         return []
@@ -49,10 +53,13 @@ def resolve_channel_extras(channel_cls):
     lines = ['protected _modelFields: Record<string, {']
     lines.append('    anchor: string;')
     lines.append('    model: Record<string, Record<string, string>>;')
+    lines.append('    many?: boolean;')
     lines.append('  }> = {')
-    for field_name, anchor, model_map in entries:
+    for field_name, anchor, model_map, many in entries:
         lines.append(f'    {json.dumps(field_name)}: {{')
         lines.append(f'      anchor: {json.dumps(anchor)},')
+        if many:
+            lines.append('      many: true,')
         lines.append('      model: {')
         for type_name, relations in model_map.items():
             rels = ', '.join(
