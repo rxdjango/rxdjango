@@ -54,6 +54,15 @@ class StateModel:
         origin: 'StateModel | None' = None,
         needs_prefetch: bool = False,
     ) -> None:
+        # Unwrap a `many=True` serializer's `ListSerializer` wrapper once,
+        # here, so every caller -- the root field build in
+        # `RxModelField.contribute_to_channel` included -- gets the same
+        # compiled tree a single-instance declaration would (design D6). A
+        # bare `ListSerializer` has no `.fields`; disassembling it without
+        # unwrapping is exactly the class-creation crash this fixes.
+        if isinstance(state_serializer, serializers.ListSerializer):
+            state_serializer = state_serializer.child
+            many = True
         self.nested_serializer = state_serializer
         self.many = many
         self.origin = origin
@@ -189,12 +198,16 @@ class StateModel:
         layers: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
         if self.many:
+            # A list field's anchor is a bare queryset (ADR-0019): unlike the
+            # single-instance case, where the caller already awaited the
+            # fetch before assignment, the queryset here is typically
+            # unevaluated. Executing it -- and serializing its rows, which
+            # may touch needs_prefetch children -- must happen off the event
+            # loop, same as every other layer's query (design D2/ADR-0016).
             queryset = instance.all() if hasattr(instance, 'all') else instance
-            instances = list(queryset)
+            anchor = await database_sync_to_async(self._fetch_anchor_rows)(queryset)
         else:
-            instances = [instance]
-
-        anchor = [self.serialize_instance(item) for item in instances]
+            anchor = [self.serialize_instance(instance)]
         layers[self.instance_type] = anchor
         fetched[self.instance_type] = {
             row['id'] for row in anchor if row.get('id') is not None
@@ -249,6 +262,19 @@ class StateModel:
         child type is still fetched as its own dedicated layer below.
         """
         queryset = self.model.objects.filter(pk__in=pks)
+        prefetch_names = self._prefetch_field_names()
+        if prefetch_names:
+            queryset = queryset.prefetch_related(*prefetch_names)
+        return [self.serialize_instance(row) for row in queryset]
+
+    def _fetch_anchor_rows(self, queryset: Any) -> list[dict[str, Any]]:
+        """Evaluate a list field's anchor queryset and serialize its rows.
+
+        Called via ``database_sync_to_async`` (see ``serialize_state``);
+        applies the same ``needs_prefetch`` treatment ``_fetch_layer`` gives
+        every other layer, so the anchor's own reverse-relation/M2M children
+        cost one query per field, not one per row.
+        """
         prefetch_names = self._prefetch_field_names()
         if prefetch_names:
             queryset = queryset.prefetch_related(*prefetch_names)

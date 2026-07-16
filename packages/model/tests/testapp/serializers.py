@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Badge, Company, Employee, Skill, Team
+from .models import Badge, Company, Employee, Skill, Task, Team
 
 
 class BadgeSerializer(serializers.ModelSerializer):
@@ -53,3 +53,9 @@ class EmployeeWithTeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['id', 'name', 'team']
+
+
+class TaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['id', 'name', 'status', 'priority', 'created_at']

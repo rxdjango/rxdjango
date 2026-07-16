@@ -2,9 +2,9 @@
 
 ## 1. Server: list anchors compile and snapshot
 
-- [ ] 1.1 Unwrap `ListSerializer` in `StateModel` so `rx.model(S(many=True))` compiles at class creation, with the field marked list-valued (fixes the `_disassemble_nested` crash); unit tests for compile parity with the single-instance form
-- [ ] 1.2 Accept queryset assignment on list fields: the layered walk's anchor layer is the queryset's full row set in one frame; empty queryset sends `v: []`; reassignment supersedes per existing semantics; unit/integration tests
-- [ ] 1.3 Consumer group management across rebind: new snapshot's rows joined, rows only in the old snapshot left; integration test asserting no frames arrive for dropped rows after rebind
+- [x] 1.1 Unwrap `ListSerializer` in `StateModel` so `rx.model(S(many=True))` compiles at class creation, with the field marked list-valued (fixes the `_disassemble_nested` crash); unit tests for compile parity with the single-instance form
+- [x] 1.2 Accept queryset assignment on list fields: the layered walk's anchor layer is the queryset's full row set in one frame; empty queryset sends `v: []`; reassignment supersedes per existing semantics; unit/integration tests
+- [x] 1.3 Consumer group management across rebind: new snapshot's rows joined, rows only in the old snapshot left; integration test asserting no frames arrive for dropped rows after rebind
 
 ## 2. Server: bind-time introspection and the `q` descriptor
 

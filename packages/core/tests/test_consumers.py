@@ -366,3 +366,89 @@ def _record_sends(sent):
     async def fake_send(text_data=None, **kwargs):
         sent.append(json.loads(text_data))
     return fake_send
+
+
+# -- Consumer group management across rebind (static-queryset-lists, task 1.3) --
+
+
+class _FakeChannelLayer:
+    def __init__(self, events):
+        self.events = events
+
+    async def group_add(self, group, channel_name):
+        self.events.append(('join', group))
+
+    async def group_discard(self, group, channel_name):
+        self.events.append(('leave', group))
+
+
+async def test_rebind_leaves_groups_only_in_the_old_snapshot():
+    from rxdjango.consumers import ContextConsumer
+
+    events = []
+    consumer = ContextConsumer()
+    consumer.channel_layer = _FakeChannelLayer(events)
+    consumer.channel_name = 'test-channel'
+    consumer.send = _record_sends([])
+
+    consumer.deposit_model_walk('tasks', make_walk(
+        (['row-1'], ['rx.Task.1']),
+        (['row-2'], ['rx.Task.2']),
+        (['row-3'], ['rx.Task.3']),
+    ))
+    await consumer._flush_rx()
+
+    # Rebind: row 2 is no longer in the new snapshot.
+    consumer.deposit_model_walk('tasks', make_walk(
+        (['row-1'], ['rx.Task.1']),
+        (['row-3'], ['rx.Task.3']),
+    ))
+    await consumer._flush_rx()
+
+    assert ('leave', 'rx.Task.2') in events
+    assert ('leave', 'rx.Task.1') not in events
+    assert ('leave', 'rx.Task.3') not in events
+    assert consumer._joined_groups == {'rx.Task.1', 'rx.Task.3'}
+
+
+async def test_clearing_a_field_leaves_every_group_it_held():
+    from rxdjango.consumers import ContextConsumer
+
+    events = []
+    consumer = ContextConsumer()
+    consumer.channel_layer = _FakeChannelLayer(events)
+    consumer.channel_name = 'test-channel'
+    consumer.send = _record_sends([])
+
+    consumer.deposit_model_walk('tasks', make_walk((['row-1'], ['rx.Task.1'])))
+    await consumer._flush_rx()
+
+    consumer.deposit_model_walk('tasks', None)
+    consumer.enqueue_rx('tasks', None)
+    await consumer._flush_rx()
+
+    assert ('leave', 'rx.Task.1') in events
+    assert consumer._joined_groups == set()
+    assert consumer._field_groups == {}
+
+
+async def test_group_shared_by_another_field_is_not_left():
+    from rxdjango.consumers import ContextConsumer
+
+    events = []
+    consumer = ContextConsumer()
+    consumer.channel_layer = _FakeChannelLayer(events)
+    consumer.channel_name = 'test-channel'
+    consumer.send = _record_sends([])
+
+    consumer.deposit_model_walk('a', make_walk((['a-row'], ['rx.Task.1'])))
+    await consumer._flush_rx()
+    consumer.deposit_model_walk('b', make_walk((['b-row'], ['rx.Task.1'])))
+    await consumer._flush_rx()
+
+    # Reassign 'a' away from Task.1 -- 'b' still needs the group.
+    consumer.deposit_model_walk('a', make_walk((['a-row-2'], [])))
+    await consumer._flush_rx()
+
+    assert ('leave', 'rx.Task.1') not in events
+    assert consumer._joined_groups == {'rx.Task.1'}

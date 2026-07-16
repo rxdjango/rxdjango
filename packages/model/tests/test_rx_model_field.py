@@ -6,11 +6,23 @@ from rest_framework import serializers
 from rxdjango import ContextChannel, rx
 from rxdjango_model.fields import RxModelField, tracked_serializers
 
-from testapp.serializers import CompanySerializer, EmployeeWithTeamSerializer
+from testapp.models import Employee, Task
+from testapp.serializers import CompanySerializer, EmployeeWithTeamSerializer, TaskSerializer
 
 
 class Channel(ContextChannel):
     company = rx.model(CompanySerializer())
+
+
+class ListChannel(ContextChannel):
+    tasks = rx.model(TaskSerializer(many=True))
+    employees = rx.model(EmployeeWithTeamSerializer(many=True))
+
+
+def _drain(walk):
+    async def _collect():
+        return [layer async for layer, groups in walk]
+    return async_to_sync(_collect)()
 
 
 def test_rx_model_installed_on_rx():
@@ -87,6 +99,68 @@ def test_reassignment_supersedes_the_pending_walk(prefetched_company, fake_consu
     ch.company = prefetched_company
     second_walk = fake_consumer.walks['company']
     assert second_walk is not first_walk
+
+
+# -- Queryset assignment on list fields (static-queryset-lists, task 1.2) --
+
+
+@pytest.mark.django_db(transaction=True)
+def test_queryset_assignment_snapshots_in_one_anchor_frame(company_tree, fake_consumer):
+    """The anchor layer of a `many=True` field is the queryset's full row
+    set delivered in a single frame (model-state: 'Queryset snapshot anchors
+    in one frame')."""
+    ch = ListChannel()
+    ch._consumer = fake_consumer
+    ch.employees = Employee.objects.filter(team__isnull=False).order_by('id')
+
+    layers = _drain(fake_consumer.walks['employees'])
+    anchor = layers[0]
+
+    assert {entry['name'] for entry in anchor} == {'Alice', 'Bob', 'Carol'}
+    assert all(
+        entry['_type'] == 'testapp.serializers.EmployeeWithTeamSerializer'
+        for entry in anchor
+    )
+    # Child layer (team) follows as an ordinary merge frame.
+    assert len(layers) == 2
+
+
+@pytest.mark.django_db(transaction=True)
+def test_empty_queryset_sends_empty_anchor_layer(fake_consumer):
+    ch = ListChannel()
+    ch._consumer = fake_consumer
+    ch.employees = Employee.objects.none()
+
+    layers = _drain(fake_consumer.walks['employees'])
+
+    assert layers == [[]]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_list_field_reassignment_supersedes_the_pending_walk(company_tree, fake_consumer):
+    ch = ListChannel()
+    ch._consumer = fake_consumer
+    ch.employees = Employee.objects.all()
+    first_walk = fake_consumer.walks['employees']
+    ch.employees = Employee.objects.filter(team__isnull=False)
+    second_walk = fake_consumer.walks['employees']
+
+    assert second_walk is not first_walk
+
+
+@pytest.mark.django_db(transaction=True)
+def test_reactive_list_field_snapshot_carries_no_group_for_empty_queryset(fake_consumer):
+    """A reactive model's `many=True` field still yields the (empty) groups
+    list per layer even when the anchor set is empty."""
+    ch = ListChannel()
+    ch._consumer = fake_consumer
+    ch.tasks = Task.objects.none()
+
+    async def _collect():
+        return [(layer, groups) async for layer, groups in fake_consumer.walks['tasks']]
+    pairs = async_to_sync(_collect)()
+
+    assert pairs == [([], [])]
 
 
 @pytest.mark.django_db

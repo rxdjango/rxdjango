@@ -35,6 +35,29 @@ def test_tree_shape():
     assert employees['badge'].many is False
 
 
+def test_many_true_declaration_compiles_with_same_shape_as_single_instance():
+    """`rx.model(S(many=True))` must compile at class creation exactly like
+    `rx.model(S())` -- the ListSerializer wrapper unwrapped once, in
+    StateModel.__init__ (design D6) -- not crash in `_disassemble_nested`
+    (a bare ListSerializer has no `.fields`)."""
+    single = StateModel(CompanySerializer())
+    listed = StateModel(CompanySerializer(many=True))
+
+    assert listed.many is True
+    assert listed.instance_type == single.instance_type
+    assert set(listed.children) == set(single.children)
+    assert listed.frontend_model() == single.frontend_model()
+
+
+def test_many_true_declaration_of_a_leaf_serializer_compiles():
+    single = StateModel(EmployeeWithTeamSerializer())
+    listed = StateModel(EmployeeWithTeamSerializer(many=True))
+
+    assert listed.many is True
+    assert listed.instance_type == single.instance_type
+    assert listed['team'].instance_type == single['team'].instance_type
+
+
 def test_instance_types_are_dotted_serializer_paths():
     sm = StateModel(CompanySerializer())
     assert sm.instance_type == 'testapp.serializers.CompanySerializer'
