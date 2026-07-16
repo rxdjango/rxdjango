@@ -17,12 +17,12 @@ Every WebSocket message in either direction SHALL be a JSON object whose `t` key
 
 ### Requirement: Ready frame opens the conversation
 
-After accepting a connection and running the channel's `on_connect` hook, the server SHALL send `{"t": "ready", "protocol": "<semver>"}` before any other frame. The current protocol version is `0.2.0` (the `o` slot's first population is an additive, minor-version change).
+After accepting a connection and running the channel's `on_connect` hook, the server SHALL send `{"t": "ready", "protocol": "<semver>"}` before any other frame. The current protocol version is `0.3.0` (the `q` bind-descriptor slot is an additive, minor-version change over `0.2.0`).
 
 #### Scenario: Ready precedes initial state
 
 - **WHEN** a channel assigns reactive state during `on_connect`
-- **THEN** the client first receives `{"t": "ready", "protocol": "0.2.0"}`
+- **THEN** the client first receives `{"t": "ready", "protocol": "0.3.0"}`
 - **AND** the `rx` frames carrying the assigned state follow the ready frame
 
 ### Requirement: `rx` frames carry full replacement values
@@ -126,3 +126,22 @@ The server SHALL only emit `o`-carrying frames for fields declared as `rx[list[S
 
 - **WHEN** any scalar or model field updates
 - **THEN** the emitted `rx` frames have no `o` key
+
+### Requirement: Bind descriptor on the `q` slot
+
+The snapshot anchor frame of a `many=True` `rx.model` field SHALL carry the bind descriptor on a `q` key: `{"t": "rx", "f": "<field>", "v": [<anchor layers>], "q": {"w": [[<column>, <lookup>, <value>], ...], "s": ["<column>" | "-<column>", ...]}}` — `w` the conjunction of introspected conditions, `s` the ordering spec with Django's `-` prefix for descending. `q` marks the frame as an authoritative snapshot: the client resets the field's membership basis to the anchor rows in `v`. `q` SHALL appear only on snapshot anchor frames of `many=True` model fields; subsequent merge frames and all other field kinds never carry it. Frames carrying `q` never carry `o`.
+
+#### Scenario: Snapshot frame carries conditions and ordering
+
+- **WHEN** `on_connect` binds `Task.objects.filter(status='open').order_by('-created_at')`
+- **THEN** the field's first frame carries `q` with `w: [["status", "exact", "open"]]` and `s: ["-created_at"]`
+
+#### Scenario: Empty snapshot still carries the descriptor
+
+- **WHEN** the bound queryset matches zero rows
+- **THEN** the anchor frame arrives with `v: []` and the `q` descriptor
+
+#### Scenario: Merge frames are plain
+
+- **WHEN** a child layer or a live row update arrives for the same field after the snapshot
+- **THEN** the frame carries no `q`
