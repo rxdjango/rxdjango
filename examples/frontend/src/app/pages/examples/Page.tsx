@@ -53,6 +53,11 @@ export function ExamplesPage() {
             Reactive model
           </a>
         </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/scalar_list`} className="text-primary-700 hover:underline">
+            Reactive list of scalars
+          </a>
+        </li>
       </ul>
     </div>
   );

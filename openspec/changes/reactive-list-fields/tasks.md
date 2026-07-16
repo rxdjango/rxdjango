@@ -35,9 +35,9 @@
 
 ## 6. Example: scalar_list (docs page + app + demo + e2e)
 
-- [ ] 6.1 Backend app `scalar_list`: `rx[list[str]]` channel with append/insert/set/remove/pop/replace actions; settings + urls registration
-- [ ] 6.2 `docs/examples/scalar_list.md` + toctree entry; `demo.tsx`; run `make extract`; `makefrontend` for the generated client
-- [ ] 6.3 Playwright e2e: each button mutates the rendered list live and order is preserved
+- [x] 6.1 Backend app `scalar_list`: `rx[list[str]]` channel with append/insert/set/remove/pop/replace actions; settings + urls registration
+- [x] 6.2 `docs/examples/scalar_list.md` + toctree entry; `demo.tsx`; run `make extract`; `makefrontend` for the generated client
+- [x] 6.3 Playwright e2e: each button mutates the rendered list live and order is preserved
 
 ## 7. Example: list_types (docs page + app + demo + e2e)
 

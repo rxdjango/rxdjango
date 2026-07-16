@@ -8,6 +8,7 @@ from counter import urls as counter_urls
 from memo import urls as memo_urls
 from nested_model import urls as nested_model_urls
 from reactive_model import urls as reactive_model_urls
+from scalar_list import urls as scalar_list_urls
 from simple_model import urls as simple_model_urls
 from testing import urls as testing_urls
 
@@ -21,6 +22,7 @@ APP_URLS = [
     simple_model_urls,
     nested_model_urls,
     reactive_model_urls,
+    scalar_list_urls,
 ]
 
 urls = [

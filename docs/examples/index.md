@@ -15,4 +15,5 @@ authorization_meta
 simple_model
 nested_model
 reactive_model
+scalar_list
 ```
