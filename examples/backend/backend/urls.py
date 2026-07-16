@@ -11,7 +11,7 @@ from nested_model import urls as nested_model_urls
 from reactive_model import urls as reactive_model_urls
 from scalar_list import urls as scalar_list_urls
 from simple_model import urls as simple_model_urls
-from static_list import urls as static_list_urls
+from static_queryset import urls as static_queryset_urls
 from streaming_list import urls as streaming_list_urls
 from task_board import urls as task_board_urls
 from testing import urls as testing_urls
@@ -29,7 +29,7 @@ APP_URLS = [
     scalar_list_urls,
     list_types_urls,
     streaming_list_urls,
-    static_list_urls,
+    static_queryset_urls,
     task_board_urls,
 ]
 

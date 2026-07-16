@@ -12,7 +12,7 @@ from playwright.sync_api import expect
 
 from testing.e2e import RxE2ETestCase
 
-from static_list.models import Task
+from static_queryset.models import Task
 
 
 def _reopen(task_id: int) -> None:
@@ -25,7 +25,7 @@ def _reopen(task_id: int) -> None:
     task.save()
 
 
-class StaticListE2ETests(RxE2ETestCase):
+class StaticQuerysetE2ETests(RxE2ETestCase):
     def setUp(self):
         # Seed before Playwright's sync_api attaches to this thread's event
         # loop (see reactive_model's e2e test): afterwards Django blocks ORM
@@ -38,14 +38,14 @@ class StaticListE2ETests(RxE2ETestCase):
         super().setUp()
 
     def test_snapshot_renders_open_tasks_only(self):
-        page = self.goto_demo('examples/static_list')
+        page = self.goto_demo('examples/static_queryset')
 
         expect(page.get_by_test_id(f'task-{self.high.id}')).to_be_visible()
         expect(page.get_by_test_id(f'task-{self.low.id}')).to_be_visible()
         expect(page.get_by_test_id(f'task-{self.closed.id}')).to_have_count(0)
 
     def test_live_update_to_a_member_changes_its_priority(self):
-        page = self.goto_demo('examples/static_list')
+        page = self.goto_demo('examples/static_queryset')
         row = page.get_by_test_id(f'task-{self.low.id}')
 
         expect(row).to_contain_text('priority 1')
@@ -53,7 +53,7 @@ class StaticListE2ETests(RxE2ETestCase):
         expect(row).to_contain_text('priority 2')
 
     def test_residual_flip_out_and_back_in(self):
-        page = self.goto_demo('examples/static_list')
+        page = self.goto_demo('examples/static_queryset')
         row = page.get_by_test_id(f'task-{self.low.id}')
 
         row.get_by_role('button', name='Close').click()
@@ -68,7 +68,7 @@ class StaticListE2ETests(RxE2ETestCase):
         expect(page.get_by_test_id(f'task-{self.low.id}')).to_be_visible()
 
     def test_delete_removes_the_row(self):
-        page = self.goto_demo('examples/static_list')
+        page = self.goto_demo('examples/static_queryset')
         row = page.get_by_test_id(f'task-{self.high.id}')
 
         row.get_by_role('button', name='Delete').click()
@@ -76,7 +76,7 @@ class StaticListE2ETests(RxE2ETestCase):
         expect(page.get_by_test_id(f'task-{self.high.id}')).to_have_count(0)
 
     def test_ordering_change_resorts(self):
-        page = self.goto_demo('examples/static_list')
+        page = self.goto_demo('examples/static_queryset')
         rows = page.locator('[data-testid^="task-"]')
 
         expect(rows.first).to_contain_text('High task')
@@ -88,7 +88,7 @@ class StaticListE2ETests(RxE2ETestCase):
         expect(rows.first).to_contain_text('Low task')
 
     def test_empty_list_renders_empty_state_not_loading(self):
-        page = self.goto_demo('examples/static_list')
+        page = self.goto_demo('examples/static_queryset')
 
         page.get_by_test_id(f'task-{self.high.id}').get_by_role(
             'button', name='Close',

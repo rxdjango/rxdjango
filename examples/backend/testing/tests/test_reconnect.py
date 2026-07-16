@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from testing.integration import RxIntegrationTestCase
 
-from static_list.models import Task
+from static_queryset.models import Task
 
 
 class ReconnectIntegrationTests(RxIntegrationTestCase):

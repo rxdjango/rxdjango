@@ -4,8 +4,8 @@ from .models import Task
 from .serializers import TaskSerializer
 
 
-class StaticListChannel(ContextChannel):
-    """The static-list tier (ADR-0018/0019): a bare queryset assigned to a
+class StaticQuerysetChannel(ContextChannel):
+    """The static-queryset tier (ADR-0018/0019): a bare queryset assigned to a
     `many=True` field. `on_connect` binds `Task.objects.filter(status='open')
     .order_by('-priority', 'id')` -- no other declaration.
 

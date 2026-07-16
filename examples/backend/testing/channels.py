@@ -1,7 +1,7 @@
 from rxdjango import ContextChannel, rx, action, memo
 
-from static_list.models import Task
-from static_list.serializers import TaskSerializer
+from static_queryset.models import Task
+from static_queryset.serializers import TaskSerializer
 
 from .models import VersionedCounter
 from .serializers import VersionedCounterSerializer

@@ -1,6 +1,6 @@
 """Integration tests for the static-queryset-lists tier's example app.
 
-`StaticListChannel.tasks` binds `Task.objects.filter(status='open')
+`StaticQuerysetChannel.tasks` binds `Task.objects.filter(status='open')
 .order_by('-priority', 'id')` once in `on_connect` -- the entire developer
 surface (ADR-0019). Everything below is client-derived: membership,
 ordering, and the null/[]/T[] state progression.
@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from testing.integration import RxIntegrationTestCase
 
-from static_list.models import Task
+from static_queryset.models import Task
 
 
-class StaticListIntegrationTests(RxIntegrationTestCase):
-    app_label = 'static_list'
-    channel = 'StaticListChannel'
-    url = '/ws/static_list/'
+class StaticQuerysetIntegrationTests(RxIntegrationTestCase):
+    app_label = 'static_queryset'
+    channel = 'StaticQuerysetChannel'
+    url = '/ws/static_queryset/'
 
     def setUp(self):
         super().setUp()

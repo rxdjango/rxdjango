@@ -4,7 +4,7 @@ Demonstrates the routed (live) tier of the queryset-list architecture
 (ADR-0018): `tasks` declares `routing='project_id'` -- a one-word column
 sugar that turns the field into a **live** list. A task created under a
 watched project, or moved into it, is delivered as it happens: no rebind,
-unlike [Static list](static_list)'s unrouted tier, whose one deliverable
+unlike [Static queryset](static_queryset)'s unrouted tier, whose one deliverable
 limitation is exactly this -- a new row waits for a rebind to appear.
 Moving a task to another project delivers the leave signal live too: the
 old side of the move disqualifies the row from the connection watching it,

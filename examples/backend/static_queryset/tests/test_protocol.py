@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from testing.integration import RxProtocolTestCase
 
-from static_list.models import Task
+from static_queryset.models import Task
 
 
-class StaticListProtocolTests(RxProtocolTestCase):
-    app_label = 'static_list'
-    channel = 'StaticListChannel'
-    url = '/ws/static_list/'
+class StaticQuerysetProtocolTests(RxProtocolTestCase):
+    app_label = 'static_queryset'
+    channel = 'StaticQuerysetChannel'
+    url = '/ws/static_queryset/'
 
     def setUp(self):
         super().setUp()

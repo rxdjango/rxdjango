@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useChannel } from '@rxdjango/react';
-import { StaticListChannel } from '../../rx/static_list/static_list.channels';
+import { StaticQuerysetChannel } from '../../rx/static_queryset/static_queryset.channels';
 import {
   Sections,
   Button,
@@ -9,8 +9,8 @@ import {
   Note,
 } from '../../components/demo';
 
-export function StaticListDemo() {
-  const channel = useChannel(StaticListChannel);
+export function StaticQuerysetDemo() {
+  const channel = useChannel(StaticQuerysetChannel);
   const [name, setName] = useState('');
   const [priority, setPriority] = useState('0');
 
@@ -80,13 +80,13 @@ export function StaticListDemo() {
       <div>
         <Row>
           <TextInput
-            id="static-list-new-task-name"
+            id="static-queryset-new-task-name"
             label="New task name"
             value={name}
             onChange={setName}
           />
           <TextInput
-            id="static-list-new-task-priority"
+            id="static-queryset-new-task-priority"
             label="Priority"
             value={priority}
             onChange={setPriority}
@@ -109,4 +109,4 @@ export function StaticListDemo() {
   );
 }
 
-export default StaticListDemo;
+export default StaticQuerysetDemo;

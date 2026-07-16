@@ -1,4 +1,4 @@
-# Static list
+# Static queryset
 
 Demonstrates the static-queryset-lists tier: `tasks` is a bare Django
 queryset assigned once in `on_connect` to a `many=True` `rx.model` field --
@@ -11,29 +11,29 @@ after the snapshot does not appear until the field is rebound -- the static
 tier's one deliberate limitation (no live new-row delivery; that arrives
 with the routed tier).
 
-```{rxdemo} static_list
+```{rxdemo} static_queryset
 ```
 
 ## Backend
 
-```{literalinclude} ../../examples/backend/static_list/channels.py
+```{literalinclude} ../../examples/backend/static_queryset/channels.py
 :language: python
 ```
 
 ## Models
 
-```{literalinclude} ../../examples/backend/static_list/models.py
+```{literalinclude} ../../examples/backend/static_queryset/models.py
 :language: python
 ```
 
 ## Serializers
 
-```{literalinclude} ../../examples/backend/static_list/serializers.py
+```{literalinclude} ../../examples/backend/static_queryset/serializers.py
 :language: python
 ```
 
 ## Frontend
 
-```{literalinclude} ../../examples/frontend/src/app/examples/static_list/demo.tsx
+```{literalinclude} ../../examples/frontend/src/app/examples/static_queryset/demo.tsx
 :language: tsx
 ```

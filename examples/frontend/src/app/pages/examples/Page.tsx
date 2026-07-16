@@ -69,8 +69,8 @@ export function ExamplesPage() {
           </a>
         </li>
         <li>
-          <a href={`${process.env.PUBLIC_URL || ''}/examples/static_list`} className="text-primary-700 hover:underline">
-            Static list
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/static_queryset`} className="text-primary-700 hover:underline">
+            Static queryset
           </a>
         </li>
         <li>

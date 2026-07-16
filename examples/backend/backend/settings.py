@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     'list_types',
     'streaming_list',
 
-    'static_list',
+    'static_queryset',
     'task_board',
 ]
 

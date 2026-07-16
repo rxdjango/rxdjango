@@ -26,8 +26,8 @@ import { ListTypesPage as ExamplesListTypesPage } from './examples/list_types/Li
 import { ListTypesDemo } from './examples/list_types/demo';
 import { StreamingListPage as ExamplesStreamingListPage } from './examples/streaming_list/StreamingListPage';
 import { StreamingListDemo } from './examples/streaming_list/demo';
-import { StaticListPage as ExamplesStaticListPage } from './examples/static_list/StaticListPage';
-import { StaticListDemo } from './examples/static_list/demo';
+import { StaticQuerysetPage as ExamplesStaticQuerysetPage } from './examples/static_queryset/StaticQuerysetPage';
+import { StaticQuerysetDemo } from './examples/static_queryset/demo';
 import { TaskBoardPage as ExamplesTaskBoardPage } from './examples/task_board/TaskBoardPage';
 import { TaskBoardDemo } from './examples/task_board/demo';
 import { ProjectStatusPage as ProjectStatusPage } from './pages/project-status/Page';
@@ -56,7 +56,7 @@ export const pages: Page[] = [
   { slug: 'examples/scalar_list', title: 'Reactive list of scalars', depth: 1, parent: 'examples', Component: ExamplesScalarListPage, Demo: ScalarListDemo },
   { slug: 'examples/list_types', title: 'Union and optional list elements', depth: 1, parent: 'examples', Component: ExamplesListTypesPage, Demo: ListTypesDemo },
   { slug: 'examples/streaming_list', title: 'Streaming list updates', depth: 1, parent: 'examples', Component: ExamplesStreamingListPage, Demo: StreamingListDemo },
-  { slug: 'examples/static_list', title: 'Static list', depth: 1, parent: 'examples', Component: ExamplesStaticListPage, Demo: StaticListDemo },
+  { slug: 'examples/static_queryset', title: 'Static queryset', depth: 1, parent: 'examples', Component: ExamplesStaticQuerysetPage, Demo: StaticQuerysetDemo },
   { slug: 'examples/task_board', title: 'Task board', depth: 1, parent: 'examples', Component: ExamplesTaskBoardPage, Demo: TaskBoardDemo },
   { slug: 'project-status', title: 'Project status', depth: 0, parent: null, Component: ProjectStatusPage, Demo: null },
 ];

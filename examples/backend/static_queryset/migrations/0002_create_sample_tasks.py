@@ -10,20 +10,20 @@ TASKS = [
 
 
 def forwards(apps, schema):
-    Task = apps.get_model('static_list', 'Task')
+    Task = apps.get_model('static_queryset', 'Task')
     for fields in TASKS:
         Task.objects.create(**fields)
 
 
 def backwards(apps, schema):
-    Task = apps.get_model('static_list', 'Task')
+    Task = apps.get_model('static_queryset', 'Task')
     Task.objects.filter(id__in=[t['id'] for t in TASKS]).delete()
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('static_list', '0001_initial'),
+        ('static_queryset', '0001_initial'),
     ]
 
     operations = [
