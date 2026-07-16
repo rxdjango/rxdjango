@@ -28,9 +28,9 @@
 
 ## 5. Example app and e2e
 
-- [ ] 5.1 Routed example app (`routing='project_id'` task board) with seed migration, docs page wired into the toctree, generated page + hand-written demo; `make check` passes
-- [ ] 5.2 Playwright e2e: created row appears live at its ordered position; dimension move removes the row; residual flip still toggles membership
-- [ ] 5.3 Integration test for two-connection isolation (dimension value A never sees value B's creations)
+- [x] 5.1 Routed example app (`routing='project_id'` task board) with seed migration, docs page wired into the toctree, generated page + hand-written demo; `make check` passes
+- [x] 5.2 Playwright e2e: created row appears live at its ordered position; dimension move removes the row; residual flip still toggles membership
+- [x] 5.3 Integration test for two-connection isolation (dimension value A never sees value B's creations)
 
 ## 6. Wrap-up
 

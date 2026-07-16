@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'streaming_list',
 
     'static_list',
+    'task_board',
 ]
 
 MIDDLEWARE = [

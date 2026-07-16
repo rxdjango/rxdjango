@@ -73,6 +73,11 @@ export function ExamplesPage() {
             Static list
           </a>
         </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/task_board`} className="text-primary-700 hover:underline">
+            Task board
+          </a>
+        </li>
       </ul>
     </div>
   );

@@ -19,4 +19,5 @@ scalar_list
 list_types
 streaming_list
 static_list
+task_board
 ```
