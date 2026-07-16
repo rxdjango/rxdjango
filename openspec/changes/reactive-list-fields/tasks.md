@@ -53,5 +53,5 @@
 
 ## 9. Wrap-up
 
-- [ ] 9.1 Full suite green: `cd examples/backend && uv run ./manage.py test`, `make check`, `packages/react` TS tests
-- [ ] 9.2 Update `openspec/specs/` baselines happen at archive; verify delta specs validate (`openspec validate --change reactive-list-fields`)
+- [x] 9.1 Full suite green: `cd examples/backend && uv run ./manage.py test`, `make check`, `packages/react` TS tests
+- [x] 9.2 Update `openspec/specs/` baselines happen at archive; verify delta specs validate (`openspec validate --change reactive-list-fields`)
