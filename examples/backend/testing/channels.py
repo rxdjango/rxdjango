@@ -1,5 +1,8 @@
 from rxdjango import ContextChannel, rx, action, memo
 
+from static_list.models import Task
+from static_list.serializers import TaskSerializer
+
 from .models import VersionedCounter
 from .serializers import VersionedCounterSerializer
 
@@ -177,3 +180,32 @@ class VersionConsistencyChannel(ContextChannel):
         # 2. Fetch the real instance (older version) and assign it.
         self.counter = await VersionedCounter.objects.aget(id=1)
         self.loaded = True
+
+
+class ReconnectChannel(ContextChannel):
+    """Exercises the persistent-socket reconnect path (static-queryset-lists
+    task 6.3, ADR-0019 D5): `force_disconnect` closes the WebSocket
+    server-side, mid-connection, on purpose. The generated client's
+    `PersistentSocket` should notice the drop and reconnect with backoff
+    entirely on its own; `on_connect` re-runs on the new connection and
+    rebinds `tasks` from scratch, so a queued action flushing successfully
+    after the drop is proof the client healed and converged.
+    """
+
+    tasks = rx.model(TaskSerializer(many=True))
+
+    async def on_connect(self):
+        self.tasks = Task.objects.filter(status='open').order_by('id')
+
+    @action
+    async def force_disconnect(self):
+        # Closes the socket without waiting for this action's own response
+        # to be flushed -- the point is an unexpected close from the
+        # client's perspective, not a graceful one it requested itself. Any
+        # client-visible effect is the WebSocket's `close` event; the code
+        # itself (a normal closure) is otherwise irrelevant to the test.
+        await self._consumer.close(code=1000)
+
+    @action
+    async def ping(self):
+        return 'pong'

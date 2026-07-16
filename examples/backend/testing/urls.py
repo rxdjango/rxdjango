@@ -4,6 +4,7 @@ from . import views
 from .channels import (
     ListConvergenceChannel,
     MemoTrackingChannel,
+    ReconnectChannel,
     TestingChannel,
     VersionConsistencyChannel,
 )
@@ -17,6 +18,7 @@ websocket_urls = [
     path('ws/testing/memo/', MemoTrackingChannel.as_asgi()),
     path('ws/testing/version/', VersionConsistencyChannel.as_asgi()),
     path('ws/testing/list/', ListConvergenceChannel.as_asgi()),
+    path('ws/testing/reconnect/', ReconnectChannel.as_asgi()),
 ]
 
 urlpatterns = urls

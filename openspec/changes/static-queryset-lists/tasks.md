@@ -27,13 +27,13 @@
 ## 5. Codegen
 
 - [x] 5.1 Generate `T[] | null` channel properties for `many=True` fields, initialized `null`; `_modelFields` marks list anchors; makefrontend tests
-- [ ] 5.2 `make check` passes (docgen + `tsc --noEmit`) with a generated list channel in the examples (verified once the example app in group 6 exists; `make check` already passes against the pre-existing example apps as of this commit)
+- [x] 5.2 `make check` passes (docgen + `tsc --noEmit`) with a generated list channel in the examples
 
 ## 6. Example app and e2e
 
-- [ ] 6.1 Backend example app for the static list tier (seed data migration, channel binding a filtered ordered queryset) and docs page `docs/examples/<slug>.md` wired into the toctree + generated page + hand-written demo
-- [ ] 6.2 Playwright e2e: snapshot render, live update to a member, residual flip out and back in, delete removes the row, ordering change re-sorts, empty list renders `[]` state not loading
-- [ ] 6.3 Reconnect e2e/integration: drop the socket server-side, assert the client heals with backoff and converges after rebind
+- [x] 6.1 Backend example app for the static list tier (seed data migration, channel binding a filtered ordered queryset) and docs page `docs/examples/<slug>.md` wired into the toctree + generated page + hand-written demo
+- [x] 6.2 Playwright e2e: snapshot render, live update to a member, residual flip out and back in, delete removes the row, ordering change re-sorts, empty list renders `[]` state not loading
+- [x] 6.3 Reconnect e2e/integration: drop the socket server-side, assert the client heals with backoff and converges after rebind
 
 ## 7. Wrap-up
 

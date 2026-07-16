@@ -269,11 +269,16 @@ if (!wsUrl) {
 async function main() {
   const channel: any = new (""" + self.channel + r""" as any)(wsUrl);
 
+  // Deliberately never unsubscribed: this script uses `channel` for its
+  // whole lifetime, and the persistent-socket transport (react-client
+  // "Persistent socket with backoff") stops reconnecting once the last
+  // subscriber unmounts -- unsubscribing here would arm that the moment the
+  // ready wait resolves, so a later server-initiated close would never be
+  // retried.
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("connect timeout")), 5000);
-    const unsub = channel.rx.subscribe(() => {
+    channel.rx.subscribe(() => {
       clearTimeout(timer);
-      unsub();
       resolve();
     });
   });

@@ -68,6 +68,11 @@ export function ExamplesPage() {
             Streaming list updates
           </a>
         </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/static_list`} className="text-primary-700 hover:underline">
+            Static list
+          </a>
+        </li>
       </ul>
     </div>
   );
