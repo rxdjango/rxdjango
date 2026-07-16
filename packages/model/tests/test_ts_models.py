@@ -76,3 +76,43 @@ def test_relation_list_field_wraps_union_in_parens():
     assert _serializer_field_ts_type(
         CompanySerializer(many=True)
     ) == '(Company | Unloaded)[]'
+
+
+# -- ChoiceField -> TS literal union (gap 3) --------------------------------
+
+
+def test_choice_field_string_choices_become_a_literal_union():
+    field = serializers.ChoiceField(choices=['open', 'closed'])
+    assert _serializer_field_ts_type(field) == "'open' | 'closed'"
+
+
+def test_choice_field_integer_choices_become_a_literal_union():
+    field = serializers.ChoiceField(choices=[(1, 'One'), (2, 'Two')])
+    assert _serializer_field_ts_type(field) == '1 | 2'
+
+
+def test_choice_field_mixed_choices_become_a_mixed_literal_union():
+    field = serializers.ChoiceField(choices=[('a', 'A'), (1, 'One')])
+    assert _serializer_field_ts_type(field) == "'a' | 1"
+
+
+def test_choice_field_allow_null_adds_null_to_the_union():
+    field = serializers.ChoiceField(choices=['open', 'closed'], allow_null=True)
+    assert _serializer_field_ts_type(field) == "'open' | 'closed' | null"
+
+
+def test_choice_field_allow_blank_adds_the_empty_string_literal():
+    field = serializers.ChoiceField(choices=['open', 'closed'], allow_blank=True)
+    assert _serializer_field_ts_type(field) == "'open' | 'closed' | ''"
+
+
+def test_choice_field_does_not_duplicate_a_blank_already_among_choices():
+    field = serializers.ChoiceField(choices=['', 'open'], allow_blank=True)
+    assert _serializer_field_ts_type(field) == "'' | 'open'"
+
+
+def test_multiple_choice_field_is_not_treated_as_a_single_literal():
+    # MultipleChoiceField subclasses ChoiceField but serializes to a set of
+    # choices, not one -- must not get the single-literal-union treatment.
+    field = serializers.MultipleChoiceField(choices=['open', 'closed'])
+    assert _serializer_field_ts_type(field) == 'any'

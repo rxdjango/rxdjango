@@ -230,6 +230,13 @@ def _serializer_field_base_ts_type(field):
         return f'{_serializer_field_ts_type(field.child)}[]'
     if isinstance(field, serializers.DictField):
         return 'Record<string, unknown>'
+    # `MultipleChoiceField` subclasses `ChoiceField` but serializes to a
+    # set/list of choices, not one -- excluded here so it falls through to
+    # the generic `any` rather than being (wrongly) typed as one literal.
+    if isinstance(field, serializers.ChoiceField) and not isinstance(
+        field, serializers.MultipleChoiceField,
+    ):
+        return _choice_field_ts_type(field)
     if isinstance(field, serializers.BooleanField):
         return 'boolean'
     if isinstance(field, serializers.IntegerField):
@@ -259,3 +266,43 @@ def _serializer_field_base_ts_type(field):
         # types themselves, no cast needed.
         return f'{interface_name(field.__class__)} | Unloaded'
     return 'any'
+
+
+def _choice_field_ts_type(field):
+    """A `ChoiceField`'s TS type is the literal union of its choice keys --
+    string choices become `'a' | 'b'`, integer choices `1 | 2`, and a
+    serializer mixing both a union of both -- rather than `any`, so a
+    `choices=` model field carries its exact value set across to the
+    frontend. `allow_blank` folds in `''` here; `allow_null`'s `| null` is
+    added by the caller (`_serializer_field_ts_type`), same as for every
+    other field type.
+    """
+    literals: list[str] = []
+    seen: set[str] = set()
+
+    def add(literal: str) -> None:
+        if literal not in seen:
+            seen.add(literal)
+            literals.append(literal)
+
+    for key in field.choices.keys():
+        if isinstance(key, bool):
+            add('true' if key else 'false')
+        elif isinstance(key, (int, float)):
+            add(repr(key))
+        else:
+            add(_ts_string_literal(str(key)))
+
+    if getattr(field, 'allow_blank', False):
+        add(_ts_string_literal(''))
+
+    if not literals:
+        return 'never'
+    return ' | '.join(literals)
+
+
+def _ts_string_literal(value: str) -> str:
+    # Single-quoted, matching this codebase's TS literal convention
+    # (rxdjango.ts.channels._ts_literal).
+    escaped = value.replace('\\', '\\\\').replace("'", "\\'")
+    return f"'{escaped}'"
