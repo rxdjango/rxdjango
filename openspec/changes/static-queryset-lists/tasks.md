@@ -21,8 +21,8 @@
 
 ## 4. Client: persistent socket
 
-- [ ] 4.1 Port v0's `PersistentWebsocket` (exponential backoff, reset on open, stop on last unsubscribe) as the `ContextChannel` transport; vitest for backoff and unmount-stops-retrying
-- [ ] 4.2 Reconnect as rebind over a warm index: new connection's `q` frames reset bases, re-delivered layers merge idempotently under `_v`; vitest for warm-reconnect convergence and reference stability
+- [x] 4.1 Port v0's `PersistentWebsocket` (exponential backoff, reset on open, stop on last unsubscribe) as the `ContextChannel` transport; vitest for backoff and unmount-stops-retrying
+- [x] 4.2 Reconnect as rebind over a warm index: new connection's `q` frames reset bases, re-delivered layers merge idempotently under `_v`; vitest for warm-reconnect convergence and reference stability
 
 ## 5. Codegen
 

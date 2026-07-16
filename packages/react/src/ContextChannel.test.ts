@@ -7,6 +7,7 @@ type Listener = (ev: { data?: string }) => void;
 class FakeWebSocket {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
+  static readonly CLOSED = 3;
   static instances: FakeWebSocket[] = [];
 
   readyState = FakeWebSocket.CONNECTING;
@@ -28,6 +29,13 @@ class FakeWebSocket {
   open(): void {
     this.readyState = FakeWebSocket.OPEN;
     for (const listener of this.listeners["open"] ?? []) {
+      listener({});
+    }
+  }
+
+  close(): void {
+    this.readyState = FakeWebSocket.CLOSED;
+    for (const listener of this.listeners["close"] ?? []) {
       listener({});
     }
   }
@@ -306,5 +314,100 @@ describe("ContextChannel", () => {
     ws.message({ t: "ready", protocol: "0.1.0" });
     await tick();
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+// Persistent socket integration (react-client "Persistent socket with
+// backoff" / "Reconnect is a rebind over a warm index", static-queryset-lists
+// tasks 4.1/4.2). Uses fake timers locally since these tests drive the
+// backoff schedule directly, unlike the macrotask-only tests above.
+
+describe("ContextChannel: persistent socket", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const flush = () => vi.advanceTimersByTimeAsync(0);
+
+  it("heals a dropped connection with backoff and keeps notifying without remounting", async () => {
+    const channel = new TestChannel();
+    const listener = vi.fn();
+    channel.rx.subscribe(listener);
+    const first = FakeWebSocket.instances[0]!;
+    first.open();
+
+    first.close();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(FakeWebSocket.instances.length).toBeGreaterThan(1);
+
+    const second = FakeWebSocket.instances.at(-1)!;
+    second.open();
+    second.message({ t: "ready", protocol: "0.3.0" });
+    await flush();
+
+    expect(listener).toHaveBeenCalled();
+  });
+
+  it("stops attempting to reconnect once the last subscriber unmounts", async () => {
+    const channel = new TestChannel();
+    const listener = vi.fn();
+    const unsubscribe = channel.rx.subscribe(listener);
+    const first = FakeWebSocket.instances[0]!;
+    first.open();
+    first.close(); // schedules a reconnect attempt
+
+    unsubscribe();
+    await vi.advanceTimersByTimeAsync(60000);
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  it("reconnect is a rebind: a warm snapshot converges and keeps unchanged references", async () => {
+    const channel = new TestChannel();
+    channel.rx.subscribe(() => {});
+    const first = FakeWebSocket.instances[0]!;
+    first.open();
+
+    first.message({
+      t: "rx",
+      f: "tasks",
+      v: [
+        { _type: "app.TaskSerializer", id: 1, status: "open", priority: 1, _v: 1 },
+        { _type: "app.TaskSerializer", id: 2, status: "open", priority: 2, _v: 1 },
+      ],
+      q: { w: [["status", "exact", "open"]], s: ["id"] },
+    });
+    await flush();
+    const beforeTasks = channel.tasks as unknown[];
+    const beforeFirst = beforeTasks[0];
+
+    // Connection drops and reconnects.
+    first.close();
+    await vi.advanceTimersByTimeAsync(10000);
+    const second = FakeWebSocket.instances.at(-1)!;
+    second.open();
+    second.message({ t: "ready", protocol: "0.3.0" });
+    await flush();
+
+    // The new connection re-sends the same snapshot (idempotent under _v):
+    // unchanged rows keep their references, and the derived list matches.
+    second.message({
+      t: "rx",
+      f: "tasks",
+      v: [
+        { _type: "app.TaskSerializer", id: 1, status: "open", priority: 1, _v: 1 },
+        { _type: "app.TaskSerializer", id: 2, status: "open", priority: 2, _v: 1 },
+      ],
+      q: { w: [["status", "exact", "open"]], s: ["id"] },
+    });
+    await flush();
+
+    expect(channel.tasks).toEqual(beforeTasks);
+    expect((channel.tasks as unknown[])[0]).toBe(beforeFirst);
   });
 });

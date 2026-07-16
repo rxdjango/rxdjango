@@ -1,3 +1,4 @@
+import { PersistentSocket } from "./PersistentSocket";
 import {
   StateBuilder,
   type Model as StateBuilderModel,
@@ -50,7 +51,7 @@ export abstract class ContextChannel<T = unknown> {
 
   private _version = 0;
   private readonly _listeners = new Set<() => void>();
-  private _ws?: WebSocket;
+  private _socket?: PersistentSocket;
   private _actionSeq = 0;
   private readonly _pending = new Map<string, Pending>();
   private readonly _sendQueue: string[] = [];
@@ -77,12 +78,27 @@ export abstract class ContextChannel<T = unknown> {
 
   readonly rx: ChannelRx = {
     subscribe: (listener: () => void) => {
+      const wasUnsubscribed = this._listeners.size === 0;
       this._listeners.add(listener);
-      if (!this._ws && (this.baseURL || this.endpoint)) {
-        this._connect(`${this.baseURL}${this.endpoint}`);
+      if (wasUnsubscribed) {
+        if (this._socket === undefined) {
+          if (this.baseURL || this.endpoint) {
+            this._connect(`${this.baseURL}${this.endpoint}`);
+          }
+        } else {
+          // A remount after the last subscriber unmounted (design D5):
+          // re-arm retrying and, if currently down, reconnect right away.
+          this._socket.resume();
+        }
       }
       return () => {
         this._listeners.delete(listener);
+        if (this._listeners.size === 0) {
+          // react-client "Persistent socket with backoff": unmounting the
+          // last subscriber stops reconnection -- no further attempts are
+          // scheduled while nobody is listening.
+          this._socket?.stop();
+        }
       };
     },
     getVersion: () => this._version,
@@ -90,21 +106,21 @@ export abstract class ContextChannel<T = unknown> {
   };
 
   private _connect(url: string): void {
-    const ws = new WebSocket(url);
-    this._ws = ws;
-    ws.addEventListener("open", () => {
+    const socket = new PersistentSocket(url);
+    this._socket = socket;
+    socket.onOpen = () => {
       while (this._sendQueue.length) {
-        ws.send(this._sendQueue.shift()!);
+        socket.send(this._sendQueue.shift()!);
       }
-    });
-    ws.addEventListener("message", (ev: MessageEvent) => {
+    };
+    socket.onMessage = (data: string) => {
       // Each frame is handled in its own macrotask so awaiters of
       // `callAction` can resolve and re-subscribe before the next
       // server-pushed message is processed (e.g. an `rx` update that
       // immediately follows an `ac` response).
-      const data = typeof ev.data === "string" ? ev.data : String(ev.data);
       setTimeout(() => this._onMessage(data), 0);
-    });
+    };
+    socket.connect();
   }
 
   private _onMessage(raw: string): void {
@@ -166,7 +182,7 @@ export abstract class ContextChannel<T = unknown> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected async _callAction(action: string, params: any[]): Promise<any> {
-    if (!this._ws) {
+    if (!this._socket) {
       throw new Error("ContextChannel: no websocket connection");
     }
     const id = String(++this._actionSeq);
@@ -174,9 +190,10 @@ export abstract class ContextChannel<T = unknown> {
     const promise = new Promise((resolve, reject) => {
       this._pending.set(id, { resolve, reject });
     });
-    if (this._ws.readyState === WebSocket.OPEN) {
-      this._ws.send(payload);
-    } else {
+    if (!this._socket.send(payload)) {
+      // Disconnected (including mid-backoff): queued and flushed on the
+      // next open, per the existing pre-open queue rule -- unchanged by
+      // the persistent socket, since a reconnect is just another open.
       this._sendQueue.push(payload);
     }
     return promise;
