@@ -21,7 +21,7 @@ class ListChannel(ContextChannel):
 
 def _drain(walk):
     async def _collect():
-        return [layer async for layer, groups in walk]
+        return [layer async for layer, groups, q in walk]
     return async_to_sync(_collect)()
 
 
@@ -65,7 +65,7 @@ def test_assignment_deposits_a_drainable_walk(prefetched_company, fake_consumer)
     walk = fake_consumer.walks['company']
 
     async def _drain():
-        return [layer async for layer, groups in walk]
+        return [layer async for layer, groups, q in walk]
 
     layers = async_to_sync(_drain)()
 
@@ -157,7 +157,10 @@ def test_reactive_list_field_snapshot_carries_no_group_for_empty_queryset(fake_c
     ch.tasks = Task.objects.none()
 
     async def _collect():
-        return [(layer, groups) async for layer, groups in fake_consumer.walks['tasks']]
+        return [
+            (layer, groups)
+            async for layer, groups, q in fake_consumer.walks['tasks']
+        ]
     pairs = async_to_sync(_collect)()
 
     assert pairs == [([], [])]

@@ -8,9 +8,9 @@
 
 ## 2. Server: bind-time introspection and the `q` descriptor
 
-- [ ] 2.1 Introspect `queryset.query.where` and ordering at bind: extract `(column, lookup, value)` conjunctions; reject OR/NOT, joined paths, unsupported lookups, non-serialized columns, non-JSON values — loudly, naming the condition; unit tests per rejection class
-- [ ] 2.2 Emit the descriptor on the snapshot anchor frame as `q: {"w": [...], "s": [...]}`; datetimes serialized exactly as DRF renders them; protocol tests for filtered, ordered, and empty querysets
-- [ ] 2.3 Bump `PROTOCOL_VERSION` to `0.3.0`; update protocol tests
+- [x] 2.1 Introspect `queryset.query.where` and ordering at bind: extract `(column, lookup, value)` conjunctions; reject OR/NOT, joined paths, unsupported lookups, non-serialized columns, non-JSON values — loudly, naming the condition; unit tests per rejection class
+- [x] 2.2 Emit the descriptor on the snapshot anchor frame as `q: {"w": [...], "s": [...]}`; datetimes serialized exactly as DRF renders them; protocol tests for filtered, ordered, and empty querysets
+- [x] 2.3 Bump `PROTOCOL_VERSION` to `0.3.0`; update protocol tests
 
 ## 3. Client: membership derivation in StateBuilder
 

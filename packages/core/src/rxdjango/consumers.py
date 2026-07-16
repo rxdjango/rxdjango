@@ -10,7 +10,7 @@ from .actions import execute_action
 from .exceptions import ForbiddenError, InvalidMessageReceived
 
 
-PROTOCOL_VERSION = '0.2.0'
+PROTOCOL_VERSION = '0.3.0'
 
 # Reactive broadcast group prefix. Kept in sync with
 # rxdjango_model.reactive_registry.GROUP_PREFIX; core declares its own copy so
@@ -136,10 +136,16 @@ class ContextConsumer(AsyncWebsocketConsumer):
             field = next(iter(self._pending_model_walks))
             walk = self._pending_model_walks.pop(field)
             walk_groups: set[str] = set()
-            async for value, groups in walk:
+            async for value, groups, query_descriptor in walk:
                 await self._join_groups(groups)
                 walk_groups.update(groups)
-                await self.send(text_data=json.dumps({'t': 'rx', 'f': field, 'v': value}))
+                msg: dict[str, Any] = {'t': 'rx', 'f': field, 'v': value}
+                if query_descriptor is not None:
+                    # Bind descriptor on the snapshot anchor frame (ADR-0019
+                    # D1): rides the same frame as the anchor's `v`, so
+                    # descriptor + membership + data arrive atomically.
+                    msg['q'] = query_descriptor
+                await self.send(text_data=json.dumps(msg))
             await self._leave_stale_groups(field, walk_groups)
 
     async def _leave_stale_groups(self, field: str, new_groups) -> None:

@@ -6,6 +6,7 @@ from typing import Any
 from rest_framework import serializers
 from rxdjango.rx import RxField, _propagate_to_memos
 
+from .query_introspection import introspect_queryset
 from .reactive_registry import group_name, register_layer
 from .state_model import StateModel
 
@@ -90,11 +91,19 @@ class RxModelField(RxField):
                     # Channel class wasn't built through the metaclass (e.g.
                     # raw use in tests). Build lazily.
                     self.state_model = StateModel(self.serializer, many=self.many)
-                consumer.deposit_model_walk(self.name, self._walk_layers(value))
+                descriptor = None
+                if self.many:
+                    # Bind-time introspection (ADR-0019 D3): synchronous, so
+                    # an unsupported condition or ordering column fails
+                    # loudly right here, before any layer is queried.
+                    descriptor = introspect_queryset(value, self.state_model).to_wire()
+                consumer.deposit_model_walk(self.name, self._walk_layers(value, descriptor))
         if old != value:
             _propagate_to_memos(obj, self.name)
 
-    async def _walk_layers(self, value: Any) -> AsyncGenerator[tuple[Any, list[str]], None]:
+    async def _walk_layers(
+        self, value: Any, descriptor: dict[str, Any] | None = None,
+    ) -> AsyncGenerator[tuple[Any, list[str], dict[str, Any] | None], None]:
         """Bridge deposited on the consumer for it to drain (design D6).
 
         ``__set__`` is a sync descriptor and cannot await the layered walk,
@@ -104,11 +113,14 @@ class RxModelField(RxField):
         before drain leaves the superseded generator inert — it is garbage
         collected having sent no frames and issued no queries.
 
-        Yields one ``(plain_layer, groups)`` pair per layer: the flat,
-        JSON-safe instance list, and the reactive broadcast groups it
-        implies (one per reactive instance in the layer), so the consumer can
-        join those groups immediately before sending that layer's frame.
+        Yields one ``(plain_layer, groups, q)`` triple per layer: the flat,
+        JSON-safe instance list, the reactive broadcast groups it implies
+        (one per reactive instance in the layer, so the consumer can join
+        them immediately before sending that layer's frame), and the bind
+        descriptor -- non-``None`` only on the walk's first (anchor) layer of
+        a ``many=True`` field (ADR-0019 D1), ``None`` on every other frame.
         """
+        first = True
         async for node, layer in self.state_model.serialize_state(value):
             groups: list[str] = []
             if node.reactive:
@@ -116,7 +128,8 @@ class RxModelField(RxField):
                     instance_id = item.get('id')
                     if instance_id is not None:
                         groups.append(group_name(node.instance_type, instance_id))
-            yield _plain(layer), groups
+            yield _plain(layer), groups, (descriptor if first else None)
+            first = False
 
     def __repr__(self):
         return f'rx.model({self.serializer!r})'

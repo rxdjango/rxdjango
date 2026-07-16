@@ -292,10 +292,16 @@ async def test_flush_drains_messages_enqueued_mid_send():
 
 def make_walk(*layers):
     """Build a walk generator like RxModelField._walk_layers deposits:
-    yields ``(value, groups)`` pairs, per test's `layers` spec."""
+    yields ``(value, groups, q)`` triples, per test's `layers` spec. Entries
+    may be given as a 2-tuple (`q` defaults to `None`) or a 3-tuple."""
     async def walk():
-        for value, groups in layers:
-            yield value, groups
+        for entry in layers:
+            if len(entry) == 2:
+                value, groups = entry
+                q = None
+            else:
+                value, groups, q = entry
+            yield value, groups, q
     return walk()
 
 
@@ -328,6 +334,30 @@ async def test_clearing_before_drain_sends_no_stale_layers():
     await consumer._flush_rx()
 
     assert sent == [{'t': 'rx', 'f': 'task', 'v': None}]
+
+
+async def test_bind_descriptor_rides_only_the_anchor_frame():
+    """The `q` slot (ADR-0019 D1) travels on the walk's first frame only;
+    every later frame for the same field is a plain `rx` frame."""
+    from rxdjango.consumers import ContextConsumer
+
+    consumer = ContextConsumer()
+    consumer.channel_layer = None
+    sent = []
+    consumer.send = _record_sends(sent)
+
+    descriptor = {'w': [['status', 'exact', 'open']], 's': ['-priority']}
+    consumer.deposit_model_walk('tasks', make_walk(
+        (['anchor-layer'], [], descriptor),
+        (['child-layer'], [], None),
+    ))
+    await consumer._flush_rx()
+
+    assert sent == [
+        {'t': 'rx', 'f': 'tasks', 'v': ['anchor-layer'], 'q': descriptor},
+        {'t': 'rx', 'f': 'tasks', 'v': ['child-layer']},
+    ]
+    assert 'q' not in sent[1]
 
 
 async def test_per_layer_group_joins_precede_that_layers_frame():
