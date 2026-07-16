@@ -1,8 +1,15 @@
-import { StateBuilder, type Model as StateBuilderModel } from "./StateBuilder";
+import {
+  StateBuilder,
+  type Model as StateBuilderModel,
+  type QueryDescriptor,
+} from "./StateBuilder";
 
 interface ModelFieldDescriptor {
   anchor: string;
   model: StateBuilderModel;
+  /** Set for a `many=True` field (design D6): routes the field through
+   * membership derivation instead of the single-anchor rebuild. */
+  many?: boolean;
 }
 
 /**
@@ -124,8 +131,11 @@ export abstract class ContextChannel<T = unknown> {
         if ("v" in msg) {
           const descriptor = this._modelFields[field];
           if (descriptor !== undefined) {
+            // `q`: the bind descriptor (ADR-0019 D1), present only on a
+            // `many=True` field's snapshot anchor frame.
+            const query = msg.q as QueryDescriptor | undefined;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (this as any)[field] = this._rebuildModelField(field, descriptor, msg.v);
+            (this as any)[field] = this._rebuildModelField(field, descriptor, msg.v, query);
           } else {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (this as any)[field] = msg.v;
@@ -214,6 +224,7 @@ export abstract class ContextChannel<T = unknown> {
     field: string,
     descriptor: ModelFieldDescriptor,
     value: unknown,
+    query?: QueryDescriptor,
   ): unknown {
     if (value === null || value === undefined) {
       this._stateBuilders.delete(field);
@@ -224,11 +235,11 @@ export abstract class ContextChannel<T = unknown> {
     }
     let builder = this._stateBuilders.get(field);
     if (builder === undefined) {
-      builder = new StateBuilder(descriptor.model, descriptor.anchor);
+      builder = new StateBuilder(descriptor.model, descriptor.anchor, descriptor.many);
       this._stateBuilders.set(field, builder);
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    builder.update(value as any);
+    builder.update(value as any, query);
     return builder.state;
   }
 

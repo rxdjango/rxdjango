@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { StateBuilder, type Model } from "./StateBuilder";
+import { StateBuilder, type Model, type QueryDescriptor } from "./StateBuilder";
 
 const model: Model = {
   "app.UserSerializer": { company: "app.CompanySerializer" },
@@ -524,5 +524,210 @@ describe("StateBuilder stub materialization (design D4, ported from v0)", () => 
       taskName: "Task #2",
       _loaded: true,
     });
+  });
+});
+
+// Membership basis / derived list state (static-queryset-lists tasks 3.1,
+// 3.3, 3.4). A `many=True` field's StateBuilder is constructed with
+// `many=true`; `q` frames (the bind descriptor) reset the membership basis
+// atomically (ADR-0019 D1/D2).
+
+const taskListModel: Model = { "app.TaskSerializer": {} };
+
+function taskRow(id: number, fields: object) {
+  return { _type: "app.TaskSerializer", id, ...fields };
+}
+
+function taskListBuilder() {
+  return new StateBuilder<Array<Record<string, unknown>>>(
+    taskListModel,
+    "app.TaskSerializer",
+    true,
+  );
+}
+
+const noOrder: QueryDescriptor = { w: [], s: [] };
+const byId: QueryDescriptor = { w: [], s: ["id"] };
+
+describe("StateBuilder list state: null / [] / T[] (task 3.4)", () => {
+  it("is null before any snapshot frame", () => {
+    const builder = taskListBuilder();
+    expect(builder.state).toBeNull();
+  });
+
+  it("is [] immediately after an empty snapshot, not null", () => {
+    const builder = taskListBuilder();
+    builder.update([], noOrder);
+    expect(builder.state).toEqual([]);
+  });
+
+  it("is the derived array after a non-empty snapshot", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { name: "A" }), taskRow(2, { name: "B" })], byId);
+    expect(builder.state).toEqual([
+      { id: 1, name: "A", _loaded: true },
+      { id: 2, name: "B", _loaded: true },
+    ]);
+  });
+});
+
+describe("StateBuilder membership basis reset on rebind (task 3.1)", () => {
+  it("a fresh q frame resets the basis to exactly its rows", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, {}), taskRow(2, {}), taskRow(3, {})], byId);
+    expect(builder.state!.map((t) => t.id)).toEqual([1, 2, 3]);
+
+    builder.update([taskRow(1, {}), taskRow(3, {})], byId);
+    expect(builder.state!.map((t) => t.id)).toEqual([1, 3]);
+  });
+
+  it("a demoted row cannot be resurrected by a frame at or below its retained watermark", () => {
+    const builder = taskListBuilder();
+    builder.update(
+      [taskRow(1, { name: "A", _v: 1 }), taskRow(2, { name: "B", _v: 5 })],
+      byId,
+    );
+    // Rebind drops row 2.
+    builder.update([taskRow(1, { name: "A", _v: 1 })], byId);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+
+    // Stale frame for row 2, at its retained watermark.
+    builder.update([taskRow(2, { name: "resurrected?", _v: 5 })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+  });
+
+  it("a demoted row re-enters only via a later authoritative snapshot", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, {}), taskRow(2, {})], byId);
+    builder.update([taskRow(1, {})], byId);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+
+    // A plain update frame (no q) for row 2 must not re-admit it.
+    builder.update([taskRow(2, { name: "still not a member" })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+
+    // Only a fresh q snapshot re-admits it.
+    builder.update([taskRow(1, {}), taskRow(2, {})], byId);
+    expect(builder.state!.map((t) => t.id)).toEqual([1, 2]);
+  });
+});
+
+describe("StateBuilder condition evaluation toggles derived membership (task 3.4)", () => {
+  const residualOpen: QueryDescriptor = { w: [["status", "exact", "open"]], s: [] };
+
+  it("a member's residual flip removes it, and a later flip restores it", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { status: "open" })], residualOpen);
+    expect(builder.state).toEqual([{ id: 1, status: "open", _loaded: true }]);
+
+    builder.update([taskRow(1, { status: "closed" })]);
+    expect(builder.state).toEqual([]);
+
+    builder.update([taskRow(1, { status: "open" })]);
+    expect(builder.state).toEqual([{ id: 1, status: "open", _loaded: true }]);
+  });
+
+  it("a row failing conditions stays in the basis, ready to flip back in", () => {
+    const builder = taskListBuilder();
+    builder.update(
+      [taskRow(1, { status: "open" }), taskRow(2, { status: "closed" })],
+      residualOpen,
+    );
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+
+    builder.update([taskRow(2, { status: "open" })]);
+    expect(builder.state!.map((t) => t.id).sort()).toEqual([1, 2]);
+  });
+});
+
+describe("StateBuilder _del shrinks the basis (task 3.4)", () => {
+  it("a tombstone removes a member row from the derived list", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, {}), taskRow(2, {})], byId);
+    builder.update([{ _type: "app.TaskSerializer", _del: 1 }]);
+    expect(builder.state!.map((t) => t.id)).toEqual([2]);
+  });
+});
+
+describe("StateBuilder ordering comparator (task 3.3)", () => {
+  it("orders by the s spec, `-` prefix descending", () => {
+    const builder = taskListBuilder();
+    builder.update(
+      [taskRow(1, { priority: 1 }), taskRow(2, { priority: 5 })],
+      { w: [], s: ["-priority"] },
+    );
+    expect(builder.state!.map((t) => t.id)).toEqual([2, 1]);
+  });
+
+  it("re-sorts when an update raises a member's ordering column above the head", () => {
+    const builder = taskListBuilder();
+    builder.update(
+      [taskRow(1, { priority: 1 }), taskRow(2, { priority: 5 })],
+      { w: [], s: ["-priority"] },
+    );
+    expect(builder.state!.map((t) => t.id)).toEqual([2, 1]);
+
+    builder.update([taskRow(1, { priority: 9 })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1, 2]);
+  });
+
+  it("honors multi-column ordering", () => {
+    const builder = taskListBuilder();
+    builder.update(
+      [
+        taskRow(1, { priority: 5 }),
+        taskRow(2, { priority: 5 }),
+        taskRow(3, { priority: 9 }),
+      ],
+      { w: [], s: ["-priority", "id"] },
+    );
+    expect(builder.state!.map((t) => t.id)).toEqual([3, 1, 2]);
+  });
+});
+
+describe("StateBuilder derived-array identity (task 3.1/3.3, D2)", () => {
+  it("keeps the array reference when an unrelated update doesn't touch the basis", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, {}), taskRow(2, {})], byId);
+    const before = builder.state;
+
+    // Row 3 was never part of any snapshot -- not a basis member.
+    builder.update([taskRow(3, { name: "not a member" })]);
+
+    expect(builder.state).toBe(before);
+  });
+
+  it("allocates a new array on membership change, preserving unaffected element references", () => {
+    // Versioned rows (as a real reactive-model list would resend on
+    // rebind): the second bind's frame for an unchanged `_v` is discarded
+    // by the watermark check rather than reapplied, so its built object is
+    // never invalidated -- the reference-stability contract this pins.
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { _v: 1 }), taskRow(2, { _v: 1 })], byId);
+    const before = builder.state!;
+    const beforeSecond = before[1];
+
+    builder.update(
+      [taskRow(1, { _v: 1 }), taskRow(2, { _v: 1 }), taskRow(3, { _v: 1 })],
+      byId,
+    );
+    const after = builder.state!;
+
+    expect(after).not.toBe(before);
+    expect(after[1]).toBe(beforeSecond);
+  });
+
+  it("allocates a new array when a member's own content changes, keeping siblings stable", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { name: "A" }), taskRow(2, { name: "B" })], byId);
+    const before = builder.state!;
+    const beforeSecond = before[1];
+
+    builder.update([taskRow(1, { name: "renamed" })]);
+    const after = builder.state!;
+
+    expect(after).not.toBe(before);
+    expect(after[0]).not.toBe(before[0]);
+    expect(after[1]).toBe(beforeSecond);
   });
 });

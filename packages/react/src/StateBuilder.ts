@@ -23,7 +23,27 @@
  * (``_del``) leave a tombstone — the watermark is retained so a late snapshot
  * of the deleted row cannot resurrect it. Layers with no ``_v`` come from
  * non-reactive models, which emit no events, and are always applied.
+ *
+ * For a `many=True` list field (ADR-0019, design D2), the same index and
+ * cache back a *membership basis* instead of a single anchor key: the
+ * server-carried set of anchor pks from the last snapshot (`q` frame, design
+ * D1). Derived list state is a pure function of (basis, index, descriptor):
+ * basis rows passing the descriptor's `w` conditions, sorted by its `s`
+ * spec. The basis is reset atomically by a `q` frame, demoting absent rows
+ * without touching their retained `_v` watermarks (they cannot be
+ * resurrected by a stale frame), and shrunk by `_del` through the existing
+ * detach path; it otherwise never grows -- a mutable residual column
+ * flipping toggles *derived* membership via an ordinary update frame, with
+ * no change to the basis itself.
  */
+
+import {
+  compareByOrdering,
+  evaluateConditions,
+  type QueryDescriptor,
+} from './membership';
+
+export type { QueryDescriptor } from './membership';
 
 export type RelationMap = Record<string, string>;
 export type Model = Record<string, RelationMap>;
@@ -55,18 +75,45 @@ interface FlatInstance {
 export class StateBuilder<T> {
   private model: Model;
   private anchor: string;
+  private many: boolean;
   private index: Record<string, FlatInstance> = {};
   private built = new Map<string, Record<string, unknown> | Unloaded>();
   private parents = new Map<string, Set<string>>();
   private watermark: Record<string, number> = {};
   private anchorKey: string | null = null;
 
-  constructor(model: Model, anchor: string) {
+  // -- `many=True` list-field state (design D2) --
+  /** Membership basis: anchor pks of the last snapshot. `null` before any
+   * `q` frame has arrived -- distinguishes "not yet snapshotted" (`state`
+   * is `null`) from "snapshotted empty" (`state` is `[]`). */
+  private basis: Set<string> | null = null;
+  private descriptor: QueryDescriptor | null = null;
+  private derivedKeys: string[] = [];
+  private derivedArray: unknown[] | null = null;
+
+  constructor(model: Model, anchor: string, many = false) {
     this.model = model;
     this.anchor = anchor;
+    this.many = many;
   }
 
-  update(instances: FlatInstance[]): void {
+  update(instances: FlatInstance[], query?: QueryDescriptor): void {
+    if (query !== undefined) {
+      // Bind descriptor on the snapshot anchor frame (ADR-0019 D1): reset
+      // the basis atomically to exactly this frame's rows, before merging
+      // them -- demoted keys keep their retained watermarks in `index`, just
+      // dropped from the basis, so a stale frame can never resurrect them
+      // (the watermark check below still applies to their data, unchanged).
+      this.descriptor = query;
+      const nextBasis = new Set<string>();
+      for (const instance of instances) {
+        const id = instance.id ?? instance._del;
+        if (id === undefined) continue;
+        nextBasis.add(`${instance._type}:${id}`);
+      }
+      this.basis = nextBasis;
+    }
+
     for (const instance of instances) {
       const id = instance.id ?? instance._del;
       const key = id === undefined ? instance._type : `${instance._type}:${id}`;
@@ -82,9 +129,10 @@ export class StateBuilder<T> {
       }
 
       if (instance._del !== undefined) {
-        // Tombstone: `remove` drops the row and detaches it from parents,
-        // while its watermark is retained so a stale snapshot arriving
-        // afterwards is discarded by the version check above.
+        // Tombstone: `remove` drops the row (and the basis membership, if
+        // any) and detaches it from parents, while its watermark is
+        // retained so a stale snapshot arriving afterwards is discarded by
+        // the version check above.
         this.remove(key);
         continue;
       }
@@ -92,15 +140,71 @@ export class StateBuilder<T> {
       this.relink(key, this.index[key], instance);
       this.index[key] = instance;
       this.invalidate(key);
-      if (instance._type === this.anchor && this.anchorKey === null) {
+      if (!this.many && instance._type === this.anchor && this.anchorKey === null) {
         this.anchorKey = key;
       }
+    }
+
+    if (this.many) {
+      // Re-derive on every call (design D2: a `q` frame, any merge frame
+      // touching a basis row, or a `_del` on one -- deriving unconditionally
+      // is simpler and just as correct, since re-deriving is O(basis size)
+      // and `rebuild()`'s own cache keeps it cheap).
+      this.deriveList();
     }
   }
 
   get state(): T | null {
+    if (this.many) {
+      if (this.basis === null) return null;
+      return this.derivedArray as T | null;
+    }
     if (this.anchorKey === null) return null;
     return this.rebuild(this.anchorKey) as T | null;
+  }
+
+  /** Recompute the derived list: basis rows passing the descriptor's `w`
+   * conditions, sorted by its `s` spec. Allocates a new array only when the
+   * membership/order sequence or an element's own reference changed;
+   * unaffected elements (and, when nothing changed, the array itself) keep
+   * their prior identity. */
+  private deriveList(): void {
+    if (this.basis === null) return;
+
+    const conditions = this.descriptor?.w ?? [];
+    const ordering = this.descriptor?.s ?? [];
+
+    let keys = Array.from(this.basis).filter((key) => {
+      const instance = this.index[key];
+      return instance !== undefined && evaluateConditions(instance, conditions);
+    });
+
+    if (ordering.length > 0) {
+      keys = keys.sort((a, b) =>
+        compareByOrdering(this.index[a]!, this.index[b]!, ordering),
+      );
+    }
+
+    const elements = keys.map((key) => this.rebuild(key));
+
+    let unchanged =
+      this.derivedArray !== null && keys.length === this.derivedKeys.length;
+    if (unchanged) {
+      for (let i = 0; i < keys.length; i++) {
+        if (
+          keys[i] !== this.derivedKeys[i] ||
+          elements[i] !== this.derivedArray![i]
+        ) {
+          unchanged = false;
+          break;
+        }
+      }
+    }
+
+    if (!unchanged) {
+      this.derivedKeys = keys;
+      this.derivedArray = elements;
+    }
   }
 
   private rebuild(key: string): Record<string, unknown> | Unloaded | null {
@@ -200,6 +304,10 @@ export class StateBuilder<T> {
     }
     this.parents.delete(key);
     if (key === this.anchorKey) this.anchorKey = null;
+    // A `_del` tombstone shrinks the membership basis through this same
+    // detach path (design D2) -- the basis otherwise never shrinks except
+    // by a fresh `q` reset.
+    this.basis?.delete(key);
   }
 
   /** Rewrite a parent's flat copy so it no longer references `childKey`. */

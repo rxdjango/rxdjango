@@ -49,6 +49,7 @@ const tick = () =>
 class TestChannel extends ContextChannel<unknown> {
   declare counter?: number;
   declare user?: unknown;
+  declare tasks?: unknown;
 
   protected override endpoint = "/ws/test/";
   protected override baseURL = "ws://backend";
@@ -60,6 +61,11 @@ class TestChannel extends ContextChannel<unknown> {
         "app.UserSerializer": { company: "app.CompanySerializer" },
         "app.CompanySerializer": {},
       },
+    },
+    tasks: {
+      anchor: "app.TaskSerializer",
+      model: { "app.TaskSerializer": {} },
+      many: true,
     },
   };
 }
@@ -123,6 +129,52 @@ describe("ContextChannel", () => {
       _loaded: true,
       company: { id: 10, name: "ACME", _loaded: true },
     });
+  });
+
+  it("derives a many=True field's state from the q bind descriptor", async () => {
+    const { channel, ws } = subscribedChannel();
+
+    // Before the first snapshot: null, not [].
+    expect(channel.tasks).toBeUndefined();
+
+    ws.message({
+      t: "rx",
+      f: "tasks",
+      v: [
+        { _type: "app.TaskSerializer", id: 1, status: "open", priority: 1 },
+        { _type: "app.TaskSerializer", id: 2, status: "open", priority: 5 },
+      ],
+      q: { w: [["status", "exact", "open"]], s: ["-priority"] },
+    });
+    await tick();
+
+    expect(channel.tasks).toEqual([
+      { id: 2, status: "open", priority: 5, _loaded: true },
+      { id: 1, status: "open", priority: 1, _loaded: true },
+    ]);
+
+    // An ordinary update frame (no q) flips a member out via the residual.
+    ws.message({
+      t: "rx",
+      f: "tasks",
+      v: [{ _type: "app.TaskSerializer", id: 2, status: "closed", priority: 5 }],
+    });
+    await tick();
+
+    expect(channel.tasks).toEqual([
+      { id: 1, status: "open", priority: 1, _loaded: true },
+    ]);
+
+    // A rebind (fresh q frame) demotes row 1, replacing the array with [].
+    ws.message({
+      t: "rx",
+      f: "tasks",
+      v: [],
+      q: { w: [["status", "exact", "open"]], s: ["-priority"] },
+    });
+    await tick();
+
+    expect(channel.tasks).toEqual([]);
   });
 
   it("nulls a model field when the backend sends null", async () => {
