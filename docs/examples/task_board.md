@@ -8,7 +8,16 @@ unlike [Static list](static_list)'s unrouted tier, whose one deliverable
 limitation is exactly this -- a new row waits for a rebind to appear.
 Moving a task to another project delivers the leave signal live too: the
 old side of the move disqualifies the row from the connection watching it,
-through an ordinary update frame.
+through an ordinary update frame. Routing is a security boundary, not a
+convenience: a connection receives every event whose `publish()` values
+intersect its own `subscribe()` values, and nothing else -- delivery *is*
+authorization here, while any filter condition left out of the routing
+dimension (a residual, like this example's `status='open'`) is mere
+presentation, evaluated client-side and shipped with its value visible, so
+secrets must never live in a residual. The explicit, deliberately loud
+firehose for "no narrowing at all" is `routing=BroadcastRouter()` --
+greppable by design, so a security review of routing code never has to
+guess which fields opted out of precise delivery.
 
 ```{rxdemo} task_board
 ```

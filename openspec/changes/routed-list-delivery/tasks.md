@@ -34,5 +34,5 @@
 
 ## 6. Wrap-up
 
-- [ ] 6.1 All three test tiers green: `uv run pytest`, `cd examples/backend && uv run ./manage.py test`, `cd packages/react && npm test`
-- [ ] 6.2 Static-tier example and tests unaffected (no routing declared anywhere in cycle 1 surfaces); docs mention the security doctrine (delivery is authorization; residuals are presentation; `BroadcastRouter` greppable)
+- [x] 6.1 All three test tiers green: `uv run pytest`, `cd examples/backend && uv run ./manage.py test`, `cd packages/react && npm test`
+- [x] 6.2 Static-tier example and tests unaffected (no routing declared anywhere in cycle 1 surfaces); docs mention the security doctrine (delivery is authorization; residuals are presentation; `BroadcastRouter` greppable)
