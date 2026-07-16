@@ -1,15 +1,22 @@
 # Overview
 
-In Django, Python code is the source of truth for databases.
-RxDjango extends this principle to generate SDKs for real-time
-single page applications (SPAs).
+In Django, Python code is the source of truth for the database: models
+declare the schema, and everything else follows. RxDjango extends that
+principle to real-time single-page applications: channels declare the live
+state a client sees, and a typed TypeScript SDK follows.
 
-Developer declares `ContextChannel` classes in `channels.py` file
-inside each app. For each context channel, a matching Typescript
-class is created. The Python instance of the channel holds the
-context in memory, and updates are automatically forward to the
-frontend's state. Frontend can call methods directly using RPC,
-with a matching interface for the backend class.
+A channel is a Python class — a `ContextChannel` — declared in a
+`channels.py` file inside a Django app. It holds the state of one client
+connection: plain reactive values, computed fields, or model instances
+serialized with the DRF serializers you already write. From these
+declarations RxDjango generates a matching TypeScript class for the
+frontend.
 
-See the [Quickstart](quickstart.md) for setup and check the
-[Examples](examples/index.md) on how it works.
+At runtime, each connected client gets a live instance of the channel.
+Assigning to a field on the server pushes the new value to the frontend
+automatically, and the frontend calls the channel's actions like ordinary
+async methods — no hand-written consumers, no channel groups, no message
+routing on either side.
+
+See the [Quickstart](quickstart.md) for setup, and try the
+[Examples](examples/index.md) to interact with each feature live.

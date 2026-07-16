@@ -10,7 +10,7 @@ export function QuickstartPage() {
         Quickstart
       </h1>
       <p className="mt-4 max-w-prose text-base leading-relaxed text-primary-800">
-        This section will contain a guide on how to setup RxDjango. For now, check the examples backend project in source code at <a href="https://github.com/rxdjango/rxdjango" className="text-primary-700 hover:underline">Github</a>.
+        This walkthrough sets up a minimal RxDjango app: a Django channel holding one reactive value, and a React component bound to it. RxDjango is working towards v0.1 and is not yet published on PyPI or npm — both packages install from the git repository for now.
       </p>
     </div>
   );
