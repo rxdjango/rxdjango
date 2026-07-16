@@ -8,11 +8,14 @@ from rxdjango.rx import RxField, _propagate_to_memos
 
 from .query_introspection import introspect_queryset
 from .reactive_registry import group_name, register_layer
+from .routing import ColumnRouter, Router
+from .routing_registry import register_router
 from .state_model import StateModel
 
 
 _tracked_serializers: set[type[serializers.BaseSerializer]] = set()
 _NoneType = type(None)
+_NO_ROUTING = object()
 
 
 class RxModelField(RxField):
@@ -21,15 +24,18 @@ class RxModelField(RxField):
     type = _NoneType
     allowed = (_NoneType,)
 
-    def __init__(self, serializer: serializers.BaseSerializer) -> None:
+    def __init__(self, serializer: serializers.BaseSerializer, routing: Any = _NO_ROUTING) -> None:
         self.serializer = serializer
         self.serializer_class, self.many = _normalize_serializer(serializer)
         self.name = ''
         self.state_model: StateModel | None = None
+        self.routing = _resolve_routing(routing, self.many)
         _tracked_serializers.add(self.serializer_class)
 
     def __set_name__(self, owner, name):
         self.name = name
+        if isinstance(self.routing, ColumnRouter):
+            self.routing.bind_field(name)
 
     def contribute_to_channel(self, channel_cls, field_name):
         """Build the ``StateModel`` for this field at class-creation time.
@@ -72,6 +78,14 @@ class RxModelField(RxField):
             if isinstance(layer.model, type) and issubclass(layer.model, ReactiveModel):
                 layer.reactive = True
                 register_layer(layer)
+
+        # Routing registers at channel-class creation, i.e. at import of the
+        # channel module (list-routing: "registers when the channel module
+        # is imported"). Dedup across fields/channels declaring the same
+        # dimension happens inside register_router, keyed by the Router's
+        # own `key`.
+        if self.routing is not None:
+            register_router(self.state_model.model, self.routing)
 
     def __get__(self, obj, objtype=None):
         if obj is None:
@@ -135,8 +149,8 @@ class RxModelField(RxField):
         return f'rx.model({self.serializer!r})'
 
 
-def model(serializer: serializers.BaseSerializer) -> RxModelField:
-    return RxModelField(serializer)
+def model(serializer: serializers.BaseSerializer, routing: Any = _NO_ROUTING) -> RxModelField:
+    return RxModelField(serializer, routing)
 
 
 def install_model_field() -> None:
@@ -145,6 +159,35 @@ def install_model_field() -> None:
 
 def tracked_serializers() -> set[type[serializers.BaseSerializer]]:
     return set(_tracked_serializers)
+
+
+def _resolve_routing(routing: Any, many: bool) -> Router | None:
+    """Validate and normalize the `routing=` argument (list-routing:
+    "Router declaration on `many=True` fields"). Returns `None` for a
+    static field (routing omitted entirely); a column string becomes
+    `ColumnRouter` sugar; a `Router` instance passes through unchanged.
+    `routing=None` and routing on a single-instance field are declaration-
+    time errors.
+    """
+    if routing is _NO_ROUTING:
+        return None
+    if routing is None:
+        raise TypeError(
+            'rx.model(..., routing=None) is invalid; omit routing entirely '
+            'for a static list (ADR-0018)'
+        )
+    if not many:
+        raise TypeError(
+            'routing= is only valid on a many=True rx.model field (ADR-0018)'
+        )
+    if isinstance(routing, str):
+        return ColumnRouter(routing)
+    if isinstance(routing, Router):
+        return routing
+    raise TypeError(
+        'routing= must be a column name (str), a Router instance, or '
+        f'omitted; got {type(routing).__name__}'
+    )
 
 
 def _normalize_serializer(serializer: serializers.BaseSerializer):

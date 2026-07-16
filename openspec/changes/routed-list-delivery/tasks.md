@@ -2,9 +2,9 @@
 
 ## 1. Router surface and registry
 
-- [ ] 1.1 `Router` base (publish/subscribe, optional `columns`, dimension key), `ColumnRouter`, `BroadcastRouter`; `routing=` accepted on `rx.model(many=True)` with column-string sugar; `routing=None` and routing on non-list fields rejected at declaration; unit tests
-- [ ] 1.2 Routing registry keyed by (model label, router key) with dedup of identical dimensions across fields/channels; group naming `rx.route.<model>.<key>.<hash(value)>` handling opaque tuple values; `None` filtered from publish/subscribe returns; unit tests
-- [ ] 1.3 Framework-owned autodiscovery of app `channels` modules in `AppConfig.ready()` (extend the existing discovery hook if one exists); unit test that import-time registration lands without app wiring
+- [x] 1.1 `Router` base (publish/subscribe, optional `columns`, dimension key), `ColumnRouter`, `BroadcastRouter`; `routing=` accepted on `rx.model(many=True)` with column-string sugar; `routing=None` and routing on non-list fields rejected at declaration; unit tests
+- [x] 1.2 Routing registry keyed by (model label, router key) with dedup of identical dimensions across fields/channels; group naming `rx.route.<model>.<key>.<hash(value)>` handling opaque tuple values; `None` filtered from publish/subscribe returns; unit tests
+- [x] 1.3 Framework-owned autodiscovery of app `channels` modules in `AppConfig.ready()` (extend the existing discovery hook if one exists); unit test that import-time registration lands without app wiring
 
 ## 2. Writer-side lifecycle broadcasts
 
