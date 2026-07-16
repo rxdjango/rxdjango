@@ -19,6 +19,11 @@ from functools import partial
 from django.db import connections, models, transaction
 
 from .reactive_registry import broadcast_delete, broadcast_instance
+from .routing_registry import (
+    broadcast_routed_delete,
+    broadcast_routed_write,
+    routing_pre_image,
+)
 
 
 class ReactiveModel(models.Model):
@@ -43,12 +48,30 @@ class ReactiveModel(models.Model):
         concurrent writer cannot interleave a version between them. The
         broadcast is deferred to ``on_commit``: in autocommit it fires
         immediately, inside a caller's transaction it fires on that commit.
+
+        For a model with registered routing dimensions (ADR-0018 design D2),
+        an update additionally reads a narrow pre-image of the routers' input
+        columns *inside this same atomic block* -- before the write, so it
+        reflects the row's old value -- gated by ``update_fields`` so a save
+        that cannot touch any router's columns skips the read entirely. The
+        pre-image is what lets the write path broadcast the leave signal to
+        `publish(old)` alongside `publish(new)`.
         """
         with transaction.atomic(using=kwargs.get("using")):
+            creating = self._state.adding
+            old_pre_image = None
+            if not creating and self.pk is not None:
+                using_for_read = self._state.db or kwargs.get("using")
+                old_pre_image = routing_pre_image(
+                    type(self), self.pk, using_for_read, kwargs.get("update_fields"),
+                )
             super().save(*args, **kwargs)
             using = self._state.db
             self._v = self._rx_bump_version(using)
-            transaction.on_commit(partial(broadcast_instance, self), using=using)
+            transaction.on_commit(
+                partial(_broadcast_saved_row, self, creating, old_pre_image),
+                using=using,
+            )
 
     def delete(self, *args, **kwargs):
         """Delete the row and schedule a versioned delete event.
@@ -64,7 +87,7 @@ class ReactiveModel(models.Model):
         result = super().delete(*args, **kwargs)
         if pk is not None:
             transaction.on_commit(
-                partial(broadcast_delete, model, pk, version),
+                partial(_broadcast_deleted_row, self, model, pk, version),
                 using=using,
             )
         return result
@@ -96,3 +119,21 @@ class ReactiveModel(models.Model):
             )
             row = cursor.fetchone()
             return row[0] if row else (self._v or 0) + 1
+
+
+def _broadcast_saved_row(instance: 'ReactiveModel', creating: bool, old_pre_image) -> None:
+    """`transaction.on_commit` callback for `save()`: the existing
+    per-instance broadcast, plus the new dimension-group lifecycle
+    broadcast (ADR-0018 design D2) for models with registered routers."""
+    broadcast_instance(instance)
+    broadcast_routed_write(instance, creating=creating, old_pre_image=old_pre_image)
+
+
+def _broadcast_deleted_row(instance: 'ReactiveModel', model: type, pk, version: int) -> None:
+    """`transaction.on_commit` callback for `delete()`: the existing
+    per-instance tombstone, plus the dimension-group tombstone. `instance`
+    still carries its pre-delete field values (only its pk attribute was
+    cleared by `Model.delete()`), which is exactly what `publish(row)`
+    needs."""
+    broadcast_delete(model, pk, version)
+    broadcast_routed_delete(instance, pk, version)

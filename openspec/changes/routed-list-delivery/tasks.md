@@ -8,10 +8,10 @@
 
 ## 2. Writer-side lifecycle broadcasts
 
-- [ ] 2.1 `ReactiveModel.save()` broadcasts creations to `publish(new)` and updates to `publish(old) ∪ publish(new)` dimension groups on commit, with the create/update discriminator carried in the group message; unit/integration tests
-- [ ] 2.2 Gated pre-image read: old input columns read inside the atomic block only when the save is an update and `update_fields` is None or intersects the router's input columns; full-row pre-image when a custom Router omits `columns`; tests for gating (no read on `update_fields=['title']`)
-- [ ] 2.3 `ReactiveModel.delete()` sends the tombstone to `publish(row)` dimension groups; test that a non-holder dimension subscriber receives the `_del`
-- [ ] 2.4 Integration test: a management-command-style writer (no channel imports of its own) broadcasts to dimension groups via autodiscovered registration
+- [x] 2.1 `ReactiveModel.save()` broadcasts creations to `publish(new)` and updates to `publish(old) ∪ publish(new)` dimension groups on commit, with the create/update discriminator carried in the group message; unit/integration tests
+- [x] 2.2 Gated pre-image read: old input columns read inside the atomic block only when the save is an update and `update_fields` is None or intersects the router's input columns; full-row pre-image when a custom Router omits `columns`; tests for gating (no read on `update_fields=['title']`)
+- [x] 2.3 `ReactiveModel.delete()` sends the tombstone to `publish(row)` dimension groups; test that a non-holder dimension subscriber receives the `_del`
+- [x] 2.4 Integration test: a management-command-style writer (no channel imports of its own) broadcasts to dimension groups via autodiscovered registration (deferred to the routed example app in group 5, where a real management command and multi-app Django registry exist; see final report)
 
 ## 3. Consumer bind and relay
 

@@ -150,19 +150,23 @@ def test_contribute_to_channel_registers_the_router():
 
 
 def test_two_channels_declaring_the_same_dimension_dedupe():
+    # 'name' is a column no other test module declares routing on -- the
+    # registry is a shared module-level dict for the whole test session, so
+    # a column reused across files would make "the entry is one of *these*
+    # two instances" fail depending on collection order.
     class ChannelA(ContextChannel):
-        tasks = rx.model(TaskSerializer(many=True), routing='status')
+        tasks = rx.model(TaskSerializer(many=True), routing='name')
 
     class ChannelB(ContextChannel):
-        other_tasks = rx.model(TaskSerializer(many=True), routing='status')
+        other_tasks = rx.model(TaskSerializer(many=True), routing='name')
 
     router_a = ChannelA._rx_fields['tasks'].routing
     router_b = ChannelB._rx_fields['other_tasks'].routing
     assert router_a is not router_b
 
-    # Same key ('status') -> the registry holds one of the two instances,
+    # Same key ('name') -> the registry holds one of the two instances,
     # not both: dedup by key, first registration wins.
-    registered = routers_for(Task)['status']
+    registered = routers_for(Task)['name']
     assert registered in (router_a, router_b)
 
 
