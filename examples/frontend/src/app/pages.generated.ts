@@ -22,6 +22,8 @@ import { ReactiveModelPage as ExamplesReactiveModelPage } from './examples/react
 import { ReactiveModelDemo } from './examples/reactive_model/demo';
 import { ScalarListPage as ExamplesScalarListPage } from './examples/scalar_list/ScalarListPage';
 import { ScalarListDemo } from './examples/scalar_list/demo';
+import { ListTypesPage as ExamplesListTypesPage } from './examples/list_types/ListTypesPage';
+import { ListTypesDemo } from './examples/list_types/demo';
 import { ProjectStatusPage as ProjectStatusPage } from './pages/project-status/Page';
 
 export type Page = {
@@ -46,5 +48,6 @@ export const pages: Page[] = [
   { slug: 'examples/nested_model', title: 'Nested model', depth: 1, parent: 'examples', Component: ExamplesNestedModelPage, Demo: NestedModelDemo },
   { slug: 'examples/reactive_model', title: 'Reactive model', depth: 1, parent: 'examples', Component: ExamplesReactiveModelPage, Demo: ReactiveModelDemo },
   { slug: 'examples/scalar_list', title: 'Reactive list of scalars', depth: 1, parent: 'examples', Component: ExamplesScalarListPage, Demo: ScalarListDemo },
+  { slug: 'examples/list_types', title: 'Union and optional list elements', depth: 1, parent: 'examples', Component: ExamplesListTypesPage, Demo: ListTypesDemo },
   { slug: 'project-status', title: 'Project status', depth: 0, parent: null, Component: ProjectStatusPage, Demo: null },
 ];

@@ -16,4 +16,5 @@ simple_model
 nested_model
 reactive_model
 scalar_list
+list_types
 ```

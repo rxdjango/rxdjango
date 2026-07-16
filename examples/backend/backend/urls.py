@@ -6,6 +6,7 @@ from authorization_meta import urls as authorization_meta_urls
 from carousel import urls as carousel_urls
 from counter import urls as counter_urls
 from memo import urls as memo_urls
+from list_types import urls as list_types_urls
 from nested_model import urls as nested_model_urls
 from reactive_model import urls as reactive_model_urls
 from scalar_list import urls as scalar_list_urls
@@ -23,6 +24,7 @@ APP_URLS = [
     nested_model_urls,
     reactive_model_urls,
     scalar_list_urls,
+    list_types_urls,
 ]
 
 urls = [

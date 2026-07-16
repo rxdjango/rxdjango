@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'reactive_model',
 
     'scalar_list',
+    'list_types',
 ]
 
 MIDDLEWARE = [

@@ -63,10 +63,12 @@ export function Fields({ children }: { children: ReactNode }) {
 export function Button({
   onClick,
   variant = 'primary',
+  disabled,
   children,
 }: {
   onClick: () => void;
   variant?: 'primary' | 'secondary';
+  disabled?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -74,6 +76,7 @@ export function Button({
       type="button"
       className={variant === 'primary' ? primaryButtonClass : secondaryButtonClass}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </button>

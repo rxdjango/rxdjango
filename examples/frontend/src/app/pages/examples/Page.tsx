@@ -58,6 +58,11 @@ export function ExamplesPage() {
             Reactive list of scalars
           </a>
         </li>
+        <li>
+          <a href={`${process.env.PUBLIC_URL || ''}/examples/list_types`} className="text-primary-700 hover:underline">
+            Union and optional list elements
+          </a>
+        </li>
       </ul>
     </div>
   );

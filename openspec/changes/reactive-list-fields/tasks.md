@@ -41,9 +41,9 @@
 
 ## 7. Example: list_types (docs page + app + demo + e2e)
 
-- [ ] 7.1 Backend app `list_types`: `rx[list[int | str]]` and `rx[list[int] | None]` fields with actions toggling None/empty and mixing element types
-- [ ] 7.2 Docs page + demo + `make extract` + `makefrontend`
-- [ ] 7.3 Playwright e2e: mixed list renders both types; null renders distinctly from empty
+- [x] 7.1 Backend app `list_types`: `rx[list[int | str]]` and `rx[list[int] | None]` fields with actions toggling None/empty and mixing element types
+- [x] 7.2 Docs page + demo + `make extract` + `makefrontend`
+- [x] 7.3 Playwright e2e: mixed list renders both types; null renders distinctly from empty
 
 ## 8. Example: streaming_list (docs page + app + demo + e2e)
 
