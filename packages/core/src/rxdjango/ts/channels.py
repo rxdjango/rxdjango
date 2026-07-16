@@ -54,6 +54,18 @@ def _ts_type(py_type):
             if p not in seen:
                 seen.append(p)
         return ' | '.join(seen)
+    if origin is list:
+        # rx[list[S]] (ADR-0017): map the element union, parenthesizing it
+        # when it has more than one member, then suffix `[]`. A field-level
+        # `| None` (rx[list[S] | None]) is handled by the Union branch above,
+        # which recurses into this branch for the list member and joins the
+        # result with `null` *outside* the array brackets.
+        args = typing.get_args(py_type)
+        elem_ts = _ts_type(args[0]) if args else 'any'
+        elem_parts = [p.strip() for p in elem_ts.split('|')]
+        if len(elem_parts) > 1:
+            elem_ts = f'({elem_ts})'
+        return f'{elem_ts}[]'
     return TYPE_MAP.get(py_type, 'any')
 
 
@@ -69,6 +81,14 @@ def _ts_literal(value):
         return f"'{escaped}'"
     if isinstance(value, (int, float)):
         return repr(value)
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            part = _ts_literal(item)
+            if part is None:
+                return None
+            parts.append(part)
+        return '[' + ', '.join(parts) + ']'
     return None
 
 

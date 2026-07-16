@@ -22,9 +22,9 @@
 
 ## 4. Codegen (`packages/core/src/rxdjango/ts/channels.py`)
 
-- [ ] 4.1 `_ts_type`: `list[S]` → mapped element union, parenthesized when >1 member, `[]` suffix; field-level `| null` outside
-- [ ] 4.2 `_ts_literal`: render list defaults
-- [ ] 4.3 makefrontend tests: generated snapshots for `string[]`, `(number | string)[]`, `number[] | null` with default literals
+- [x] 4.1 `_ts_type`: `list[S]` → mapped element union, parenthesized when >1 member, `[]` suffix; field-level `| null` outside
+- [x] 4.2 `_ts_literal`: render list defaults
+- [x] 4.3 makefrontend tests: generated snapshots for `string[]`, `(number | string)[]`, `number[] | null` with default literals
 
 ## 5. Convergence and semantics tests (backend suite)
 
