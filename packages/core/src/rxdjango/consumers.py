@@ -10,7 +10,7 @@ from .actions import execute_action
 from .exceptions import ForbiddenError, InvalidMessageReceived
 
 
-PROTOCOL_VERSION = '0.3.0'
+PROTOCOL_VERSION = '0.4.0'
 
 # Reactive broadcast group prefix. Kept in sync with
 # rxdjango_model.reactive_registry.GROUP_PREFIX; core declares its own copy so

@@ -15,10 +15,14 @@
  * `wire-protocol`'s `q` slot. */
 export type ConditionTriple = [string, string, unknown];
 
-/** The bind descriptor riding a `many=True` field's snapshot anchor frame. */
+/** The bind descriptor riding a `many=True` field's snapshot anchor frame.
+ * `l` (ADR-0018 design D5) marks a *routed* (live) field: its membership
+ * basis may grow from qualifying full-layer events, not just shrink. Absent
+ * (or `false`) on a static field, which keeps cycle 1's never-grow rule. */
 export interface QueryDescriptor {
   w: ConditionTriple[];
   s: string[];
+  l?: boolean;
 }
 
 export const SUPPORTED_LOOKUPS = new Set([

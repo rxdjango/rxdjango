@@ -410,4 +410,58 @@ describe("ContextChannel: persistent socket", () => {
     expect(channel.tasks).toEqual(beforeTasks);
     expect((channel.tasks as unknown[])[0]).toBe(beforeFirst);
   });
+
+  it("a live field's basis resets on reconnect and growth resumes after (task 4.3)", async () => {
+    const channel = new TestChannel();
+    channel.rx.subscribe(() => {});
+    const first = FakeWebSocket.instances[0]!;
+    first.open();
+
+    first.message({
+      t: "rx",
+      f: "tasks",
+      v: [{ _type: "app.TaskSerializer", id: 1, status: "open", priority: 1, _v: 1 }],
+      q: { w: [["status", "exact", "open"]], s: ["id"], l: true },
+    });
+    await flush();
+
+    // A creation grows the live basis before any reconnect.
+    first.message({
+      t: "rx",
+      f: "tasks",
+      v: [{ _type: "app.TaskSerializer", id: 2, status: "open", priority: 2, _v: 1 }],
+    });
+    await flush();
+    expect((channel.tasks as Array<{ id: number }>).map((t) => t.id).sort()).toEqual([1, 2]);
+
+    // Connection drops and reconnects.
+    first.close();
+    await vi.advanceTimersByTimeAsync(10000);
+    const second = FakeWebSocket.instances.at(-1)!;
+    second.open();
+    second.message({ t: "ready", protocol: "0.4.0" });
+    await flush();
+
+    // The rebind's fresh snapshot is authoritative: row 2 (created after the
+    // first snapshot, never itself re-sent by a real rebind walk) is absent
+    // from this reconnect's snapshot and is demoted.
+    second.message({
+      t: "rx",
+      f: "tasks",
+      v: [{ _type: "app.TaskSerializer", id: 1, status: "open", priority: 1, _v: 1 }],
+      q: { w: [["status", "exact", "open"]], s: ["id"], l: true },
+    });
+    await flush();
+    expect((channel.tasks as Array<{ id: number }>).map((t) => t.id)).toEqual([1]);
+
+    // Live growth resumes on the new connection: a fresh creation is
+    // admitted exactly as before the reconnect.
+    second.message({
+      t: "rx",
+      f: "tasks",
+      v: [{ _type: "app.TaskSerializer", id: 3, status: "open", priority: 3, _v: 1 }],
+    });
+    await flush();
+    expect((channel.tasks as Array<{ id: number }>).map((t) => t.id).sort()).toEqual([1, 3]);
+  });
 });

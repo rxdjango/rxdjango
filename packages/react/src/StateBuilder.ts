@@ -90,6 +90,10 @@ export class StateBuilder<T> {
   private descriptor: QueryDescriptor | null = null;
   private derivedKeys: string[] = [];
   private derivedArray: unknown[] | null = null;
+  /** Set from the descriptor's `l` marker (ADR-0018 design D5): a live
+   * (routed) field's basis grows from qualifying full anchor-type layers;
+   * a static field never sets this and keeps the never-grow rule. */
+  private live = false;
 
   constructor(model: Model, anchor: string, many = false) {
     this.model = model;
@@ -105,6 +109,7 @@ export class StateBuilder<T> {
       // dropped from the basis, so a stale frame can never resurrect them
       // (the watermark check below still applies to their data, unchanged).
       this.descriptor = query;
+      this.live = query.l === true;
       const nextBasis = new Set<string>();
       for (const instance of instances) {
         const id = instance.id ?? instance._del;
@@ -142,6 +147,21 @@ export class StateBuilder<T> {
       this.invalidate(key);
       if (!this.many && instance._type === this.anchor && this.anchorKey === null) {
         this.anchorKey = key;
+      }
+      if (
+        this.many &&
+        this.live &&
+        this.basis !== null &&
+        instance._type === this.anchor &&
+        !this.basis.has(key) &&
+        evaluateConditions(instance, this.descriptor?.w ?? [])
+      ) {
+        // Basis growth (ADR-0018 design D5): a full anchor-type layer that
+        // passes the descriptor's conditions joins the basis -- the leave
+        // edge needs no new machinery, since the old-side update frame that
+        // disqualifies a member is an ordinary merge frame `deriveList`
+        // already re-evaluates on every call.
+        this.basis.add(key);
       }
     }
 

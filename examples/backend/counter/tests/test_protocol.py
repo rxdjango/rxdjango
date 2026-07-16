@@ -24,7 +24,7 @@ class CounterProtocolTests(RxProtocolTestCase):
 
         self.assertEqual(len(trace), 4)
         self.assertEqual(trace[0], {'from': 'server',
-                                    'data': {'protocol': '0.3.0', 't': 'ready'},
+                                    'data': {'protocol': '0.4.0', 't': 'ready'},
                                     })
         self.assertEqual(trace[1], {'from': 'client',
                                     'data': {'a': 'increment', 'id': '1', 'p': [], 't': 'ac'},

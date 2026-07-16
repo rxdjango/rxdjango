@@ -93,6 +93,25 @@ def _create_employee_with_team():
     return Employee.objects.create(name='Bob', team=team)
 
 
+def test_routed_field_snapshot_carries_the_live_marker():
+    """wire-protocol: "Routed field is marked live" -- a `routing=` field's
+    `q` carries `l: true`; a static field's `q` has no `l` key (asserted by
+    `test_snapshot_frame_carries_conditions_and_ordering` above)."""
+    class RoutedTasksChannel(ContextChannel):
+        tasks = rx.model(TaskSerializer(many=True), routing='status')
+
+    Task.objects.create(name='A', status='open', priority=1)
+
+    channel = RoutedTasksChannel()
+    consumer, sent = _wire_up(channel)
+
+    channel.tasks = Task.objects.filter(status='open').order_by('id')
+    _drain(consumer)
+
+    frame = sent[0]
+    assert frame['q']['l'] is True
+
+
 def test_child_layer_frame_carries_no_descriptor():
     _create_employee_with_team()
 

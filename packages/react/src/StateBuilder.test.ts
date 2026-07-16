@@ -731,3 +731,66 @@ describe("StateBuilder derived-array identity (task 3.1/3.3, D2)", () => {
     expect(after[1]).toBe(beforeSecond);
   });
 });
+
+// Live basis growth for routed fields (routed-list-delivery task 4.2,
+// ADR-0018 design D5): the `l` marker on the bind descriptor lets the basis
+// *grow* from a qualifying full anchor-type layer arriving with no rebind --
+// static fields (no `l`) keep cycle 1's never-grow rule unchanged.
+
+describe("StateBuilder live basis growth (task 4.2, ADR-0018 D5)", () => {
+  const liveOpen: QueryDescriptor = { w: [["status", "exact", "open"]], s: [], l: true };
+  const staticOpen: QueryDescriptor = { w: [["status", "exact", "open"]], s: [] };
+
+  it("a creation passing conditions joins the basis with no rebind (enter)", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { status: "open" })], liveOpen);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+
+    // A brand-new row arrives as an ordinary merge frame (no q) -- the live
+    // field's basis grows to admit it.
+    builder.update([taskRow(2, { status: "open", _v: 1 })]);
+    expect(builder.state!.map((t) => t.id).sort()).toEqual([1, 2]);
+  });
+
+  it("a grown row leaves when an old-side update frame fails the conditions (enter-then-leave)", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { status: "open" })], liveOpen);
+    builder.update([taskRow(2, { status: "open", _v: 1 })]);
+    expect(builder.state!.map((t) => t.id).sort()).toEqual([1, 2]);
+
+    // Row 2 moves out of the dimension -- the old-side delivery is an
+    // ordinary update frame failing `w`; no new machinery needed.
+    builder.update([taskRow(2, { status: "closed", _v: 2 })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+  });
+
+  it("a stale frame on a grown row cannot resurrect it past its watermark", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { status: "open" })], liveOpen);
+    builder.update([taskRow(2, { status: "open", _v: 5 })]);
+    expect(builder.state!.map((t) => t.id).sort()).toEqual([1, 2]);
+
+    builder.update([taskRow(2, { status: "closed", _v: 6 })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+
+    // A frame at/below the retained watermark must not resurrect it.
+    builder.update([taskRow(2, { status: "open", _v: 5 })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+  });
+
+  it("a creation failing conditions never joins the basis", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { status: "open" })], liveOpen);
+
+    builder.update([taskRow(3, { status: "closed", _v: 1 })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+  });
+
+  it("a static field (no l marker) never grows from a later merge frame", () => {
+    const builder = taskListBuilder();
+    builder.update([taskRow(1, { status: "open" })], staticOpen);
+
+    builder.update([taskRow(2, { status: "open", _v: 1 })]);
+    expect(builder.state!.map((t) => t.id)).toEqual([1]);
+  });
+});

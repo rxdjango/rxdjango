@@ -22,9 +22,9 @@
 
 ## 4. Wire and client
 
-- [ ] 4.1 Descriptor gains `l: true` for routed fields (absent for static); `PROTOCOL_VERSION` → `0.4.0`; protocol tests
-- [ ] 4.2 StateBuilder basis growth for live fields: qualifying full anchor layers join the basis at the ordered position; static fields keep never-grow; vitest for enter, enter-then-leave, and stale-frame rejection on a grown row
-- [ ] 4.3 Live-field end-to-end over the reconnect path: rebind after reconnect resets the basis and live growth resumes; vitest/integration
+- [x] 4.1 Descriptor gains `l: true` for routed fields (absent for static); `PROTOCOL_VERSION` → `0.4.0`; protocol tests
+- [x] 4.2 StateBuilder basis growth for live fields: qualifying full anchor layers join the basis at the ordered position; static fields keep never-grow; vitest for enter, enter-then-leave, and stale-frame rejection on a grown row
+- [x] 4.3 Live-field end-to-end over the reconnect path: rebind after reconnect resets the basis and live growth resumes; vitest/integration
 
 ## 5. Example app and e2e
 
