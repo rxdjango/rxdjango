@@ -17,7 +17,7 @@ export function MemoPage() {
     <ExampleLayout title="@memo" demo={<MemoDemo />}>
       <ExampleSection position="first">
         <ExampleDescription>
-          This provides the exact same functionality as [rx field](carousel.md) example, now using @memo decorator. @memo receives a list of rx field names that are checked on any update to see if the value needs to be recalculated. Inspired by React's useMemo()
+          This provides the exact same functionality as <a href={`${process.env.PUBLIC_URL || ''}/examples/carousel`} className="text-primary-700 hover:underline">rx field</a> example, now using @memo decorator. @memo receives a list of rx field names that are checked on any update to see if the value needs to be recalculated. Inspired by React's useMemo()
         </ExampleDescription>
       </ExampleSection>
       <ExampleSection ariaLabelledBy="examples-memo-backend">

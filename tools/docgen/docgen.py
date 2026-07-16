@@ -84,7 +84,53 @@ def kebab(slug: str) -> str:
 def strip_inline_markdown(text: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"`([^`]*)`", r"\1", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"(?<!\w)\*([^*]+)\*(?!\w)", r"\1", text)
     return text
+
+
+MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+
+LINK_CLASS = "text-primary-700 hover:underline"
+
+
+def resolve_internal_slug(target: str, page: Page) -> str:
+    """Resolve a relative markdown link target to a page slug, relative to
+    the directory of the page's source file (matching MyST's resolution)."""
+    t = target[:-3] if target.endswith(".md") else target
+    if t.endswith("/index"):
+        t = t[: -len("/index")]
+    parts = [p for p in Path(page.source_md).parent.parts if p != "."]
+    for seg in t.split("/"):
+        if seg in ("", "."):
+            continue
+        if seg == "..":
+            if parts:
+                parts.pop()
+        else:
+            parts.append(seg)
+    return "/".join(parts)
+
+
+def description_jsx(page: Page) -> str:
+    """The page description as JSX text: markdown links become anchors.
+
+    External links keep their URL; internal links (``quickstart.md``,
+    ``examples/index.md``, a bare sibling slug) become app-route anchors
+    using the same PUBLIC_URL pattern as the generated child-link lists.
+    """
+
+    def repl(m: re.Match[str]) -> str:
+        text, target = m.group(1), m.group(2)
+        if target.startswith(("http://", "https://")):
+            return f'<a href="{target}" className="{LINK_CLASS}">{text}</a>'
+        slug = resolve_internal_slug(target, page)
+        return (
+            "<a href={`${process.env.PUBLIC_URL || ''}/" + slug + "`}"
+            f' className="{LINK_CLASS}">{text}</a>'
+        )
+
+    return MD_LINK_RE.sub(repl, page.description)
 
 
 def js_string(value: str) -> str:
@@ -313,7 +359,7 @@ def render_example_page_tsx(page: Page) -> str:
 
     lines.append('      <ExampleSection position="first">')
     lines.append("        <ExampleDescription>")
-    lines.append(f"          {page.description}")
+    lines.append(f"          {description_jsx(page)}")
     lines.append("        </ExampleDescription>")
     lines.append("      </ExampleSection>")
 
@@ -395,7 +441,7 @@ def render_doc_page_tsx(page: Page, all_pages: list[Page]) -> str:
         lines.append(
             "      <p className=\"mt-4 max-w-prose text-base leading-relaxed text-primary-800\">"
         )
-        lines.append(f"        {page.description}")
+        lines.append(f"        {description_jsx(page)}")
         lines.append("      </p>")
     if children:
         lines.append("      <ul className=\"mt-6 flex flex-col gap-2\">")

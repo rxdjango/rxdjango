@@ -10,7 +10,7 @@ export function ProjectStatusPage() {
         Project status
       </h1>
       <p className="mt-4 max-w-prose text-base leading-relaxed text-primary-800">
-        We have built the main project semantics and core functionality. There's still a roadmap ahead for v0.1. Now that the site is functional, we have the next big engineering effort: the model architecture. Give us a star at [Github](https://github.com/rxdjango/rxdjango) to keep updated with the development!
+        We have built the main project semantics and core functionality. There's still a roadmap ahead for v0.1. Now that the site is functional, we have the next big engineering effort: the model architecture. Give us a star at <a href="https://github.com/rxdjango/rxdjango" className="text-primary-700 hover:underline">Github</a> to keep updated with the development!
       </p>
     </div>
   );

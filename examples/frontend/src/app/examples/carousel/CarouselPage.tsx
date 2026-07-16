@@ -17,7 +17,7 @@ export function CarouselPage() {
     <ExampleLayout title="rx fields" demo={<CarouselDemo />}>
       <ExampleSection position="first">
         <ExampleDescription>
-          This example shows how an rx field can be used as a bare str or int. They are indeed extensions of int and str. **NOTE**: bool type cannot be extended. rx[bool] fields cannot be used with is comparison.
+          This example shows how an rx field can be used as a bare str or int. They are indeed extensions of int and str. NOTE: bool type cannot be extended. rx[bool] fields cannot be used with is comparison.
         </ExampleDescription>
       </ExampleSection>
       <ExampleSection ariaLabelledBy="examples-carousel-backend">
