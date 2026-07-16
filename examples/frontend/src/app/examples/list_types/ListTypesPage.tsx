@@ -17,7 +17,7 @@ export function ListTypesPage() {
     <ExampleLayout title="Union and optional list elements" demo={<ListTypesDemo />}>
       <ExampleSection position="first">
         <ExampleDescription>
-          This example shows the rest of rx[list[S]]'s type surface (ADR-0017): list[int | str] mixes element types in one array, and list[int] | None distinguishes the field being unset (null) from being set to an empty list ([]) — two different states at the value tier, not just a naming convention.
+          This example shows the rest of rx[list[S]]'s type surface: list[int | str] mixes element types in one array, and list[int] | None distinguishes the field being unset (null) from being set to an empty list ([]) — two genuinely different states, on the wire and in the generated types.
         </ExampleDescription>
       </ExampleSection>
       <ExampleSection ariaLabelledBy="examples-list-types-backend">

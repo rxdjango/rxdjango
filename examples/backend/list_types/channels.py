@@ -2,11 +2,11 @@ from rxdjango import ContextChannel, rx, action
 
 
 class ListTypesChannel(ContextChannel):
-    """Union element types and an optional list (ADR-0017).
+    """Union element types and an optional list.
 
     `mixed` shows `list[int | str]` rendering both element types in one
-    array. `optional_numbers` shows the value tier of the field-level
-    None-union: `null` (not set) is distinct from `[]` (set, but empty).
+    array. `optional_numbers` shows an optional list: `null` (not set)
+    is distinct from `[]` (set, but empty).
     """
 
     mixed = rx[list[int | str]]([1, 'two', 3])

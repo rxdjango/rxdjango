@@ -17,7 +17,7 @@ export function SimpleModelPage() {
     <ExampleLayout title="Simple model" demo={<SimpleModelDemo />}>
       <ExampleSection position="first">
         <ExampleDescription>
-          
+          This example introduces rx.model: a channel field holding a Django model instance, serialized with a DRF serializer you already write. Assigning an instance to the field delivers its serialized data to the frontend, typed to match the serializer.
         </ExampleDescription>
       </ExampleSection>
       <ExampleSection ariaLabelledBy="examples-simple-model-backend">

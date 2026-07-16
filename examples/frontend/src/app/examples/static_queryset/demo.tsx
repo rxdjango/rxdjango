@@ -20,11 +20,10 @@ export function StaticQuerysetDemo() {
         <Note>
           `tasks` is a bare queryset bound once in `on_connect` -- open
           tasks, ordered by descending priority. Toggling a task&apos;s
-          status flips it out of (or back into) the list through an
-          ordinary update frame; bumping priority re-sorts it; deleting a
-          task removes it. Adding a task does *not* appear until you press
-          Rebind -- the static tier delivers snapshots plus updates to known
-          rows, never new rows.
+          status flips it out of (or back into) the list; bumping priority
+          re-sorts it; deleting a task removes it. A newly added task only
+          appears when you press Rebind -- updates reach rows already in
+          the list, never new rows.
         </Note>
       </div>
       <div>

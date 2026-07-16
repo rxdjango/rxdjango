@@ -4,11 +4,8 @@ from rxdjango.models import ReactiveModel
 
 
 class Task(ReactiveModel):
-    """A task on a shared board. `status` (plain 'open'/'closed' strings, no
-    `choices=` -- that maps to a DRF `ChoiceField`, which the TS generator
-    doesn't special-case yet, an unrelated pre-existing gap not worth
-    demonstrating here) is the residual column the channel's queryset
-    filters on; `priority` is its ordering column."""
+    """A task on a shared board: the channel's queryset filters on
+    `status` and orders by `priority`."""
 
     name = models.CharField(max_length=64)
     status = models.CharField(max_length=16, default='open')

@@ -1,10 +1,10 @@
 # Union and optional list elements
 
-This example shows the rest of `rx[list[S]]`'s type surface (ADR-0017):
+This example shows the rest of `rx[list[S]]`'s type surface:
 `list[int | str]` mixes element types in one array, and `list[int] | None`
-distinguishes the field being unset (`null`) from being set to an empty list
-(`[]`) — two different states at the value tier, not just a naming
-convention.
+distinguishes the field being unset (`null`) from being set to an empty
+list (`[]`) — two genuinely different states, on the wire and in the
+generated types.
 
 ```{rxdemo} list_types
 ```

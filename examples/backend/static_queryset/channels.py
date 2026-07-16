@@ -5,16 +5,15 @@ from .serializers import TaskSerializer
 
 
 class StaticQuerysetChannel(ContextChannel):
-    """The static-queryset tier (ADR-0018/0019): a bare queryset assigned to a
-    `many=True` field. `on_connect` binds `Task.objects.filter(status='open')
-    .order_by('-priority', 'id')` -- no other declaration.
+    """A bare queryset assigned to a `many=True` field. `on_connect` binds
+    `Task.objects.filter(status='open').order_by('-priority', 'id')` -- no
+    other declaration.
 
-    Membership is entirely client-derived from there: `toggle_status` flips
-    the residual (`status`) column an ordinary update frame re-evaluates;
-    `bump_priority` moves a row through the client's own ordering
-    comparator; `delete_task` tombstones a row out of the list. `add_task`
-    deliberately does *not* appear until `rebind` runs again -- the static
-    tier's one documented limitation (no live new-row delivery).
+    The client keeps the list correct from there: `toggle_status` flips a
+    task out of (or back into) the list, `bump_priority` re-sorts it, and
+    `delete_task` removes it. `add_task` deliberately does *not* appear
+    until `rebind` runs again -- new rows arrive live only on a routed
+    list (see `task_board`).
     """
 
     tasks = rx.model(TaskSerializer(many=True))

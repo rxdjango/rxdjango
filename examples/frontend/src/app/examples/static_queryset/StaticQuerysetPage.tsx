@@ -17,7 +17,7 @@ export function StaticQuerysetPage() {
     <ExampleLayout title="Static queryset" demo={<StaticQuerysetDemo />}>
       <ExampleSection position="first">
         <ExampleDescription>
-          Demonstrates the static-queryset-lists tier: tasks is a bare Django queryset assigned once in on_connect to a many=True rx.model field -- no declaration language, no new verbs. Membership is derived entirely on the client: the snapshot's rows, filtered by the queryset's conditions and sorted by its ordering, both re-evaluated live as ordinary update frames arrive. Toggling a task's status flips it out of (or back into) the list; raising its priority re-sorts it; deleting it removes it. A task created after the snapshot does not appear until the field is rebound -- the static tier's one deliberate limitation (no live new-row delivery; that arrives with the routed tier).
+          tasks is a bare Django queryset assigned once in on_connect to a many=True rx.model field -- that one assignment is the whole declaration. The client keeps the list correct on its own: rows are filtered by the queryset's conditions and sorted by its ordering, re-evaluated live as updates arrive. Toggling a task's status flips it out of (or back into) the list; raising its priority re-sorts it; deleting it removes it. One deliberate limitation: a task created after the snapshot appears only when the field is rebound -- for lists where new rows arrive live, see <a href={`${process.env.PUBLIC_URL || ''}/examples/task_board`} className="text-primary-700 hover:underline">Task board</a>.
         </ExampleDescription>
       </ExampleSection>
       <ExampleSection ariaLabelledBy="examples-static-queryset-backend">

@@ -1,9 +1,9 @@
 # Streaming list updates
 
-This example makes the delta story visible: a background timer appends one
-number to `rx[list[int]]` every tick, entirely independent of any client
-action. Each tick sends one small insert op — the wire cost never grows with
-how many items the list already holds.
+This example shows updates that no client asked for: a background timer
+appends one number to `rx[list[int]]` every tick, entirely independent of
+any client action. Each tick sends one small update — the message size
+never grows with how many items the list already holds.
 
 ```{rxdemo} streaming_list
 ```

@@ -2,11 +2,11 @@ from rxdjango import ContextChannel, rx, action
 
 
 class ScalarListChannel(ContextChannel):
-    """CRUD over a plain `rx[list[str]]` field (ADR-0017).
+    """CRUD over a plain `rx[list[str]]` field.
 
-    Every action below is a single Python list mutator; the descriptor
-    intercepts it and pushes the corresponding delta operation to the
-    client — no full-list re-send, however many items are in the list.
+    Every action below is a single Python list mutator; the field
+    intercepts it and pushes a small delta to the client — no full-list
+    re-send, however many items are in the list.
     """
 
     items = rx[list[str]](['apple', 'banana', 'cherry'])
